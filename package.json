@@ -1,0 +1,27 @@
+{
+  "name": "@cawfree/sofia",
+  "version": "1.0.0",
+  "description": "Firestore rules. With variables.",
+  "main": "index.js",
+  "repository": "https://github.com/Cawfree/sofia",
+  "author": "cawfree <cawfree@gmail.com>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "test": "TERM=dumb jest --watch --verbose false",
+    "start": "babel ./index.js -o out.js && node ./ ; rm -rf ./out.js"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.3",
+    "@babel/core": "^7.4.3",
+    "@babel/preset-env": "^7.4.3",
+    "babel-plugin-transform-es2015-destructuring": "^6.23.0",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "jest": "^24.7.1"
+  },
+  "dependencies": {
+    "@babel/polyfill": "^7.4.3",
+    "expression-eval": "^2.0.0",
+    "lodash.flatten": "^4.4.0"
+  }
+}
