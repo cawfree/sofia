@@ -194,7 +194,7 @@ function evaluate(def, stack, ref, pwd) {
 }
 
 const shouldCompile = (def, stack, ref, pwd, str, mode) => {
-  return `allow ${mode}: ${evaluate(
+  return `allow ${mode}: if ${evaluate(
     def,
     stack,
     ref,

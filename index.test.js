@@ -55,19 +55,19 @@ test('that a simple nested collections, references and rulesn can be defined', f
   //     match /example/{document=**} {
   //       match /nested/{document=**} {
   //         match /collection/{collectionDocId} {
-  //           allow read: false;
-  //           allow create: true;
-  //           allow list: false;
-  //           allow update: true;
+  //           allow read: if false;
+  //           allow create: if true;
+  //           allow list: if false;
+  //           allow update: if true;
   //         }
   //         match /someOtherCollection/{someOtherCollectionDocId} {
-  //           allow read: false;
-  //           allow create: true;
-  //           allow list: false;
-  //           allow update: true;
+  //           allow read: if false;
+  //           allow create: if true;
+  //           allow list: if false;
+  //           allow update: if true;
   //           match /someOtherCollectionChildCollection/{document=**} {
-  //             allow read: false;
-  //             allow write: true;
+  //             allow read: if false;
+  //             allow write: if true;
   //             match /someDeeplyNestedCollection/{someDeeplyNestedDocId} {
   //             }
   //           }
@@ -77,7 +77,7 @@ test('that a simple nested collections, references and rulesn can be defined', f
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /example/{document=**} {\n      match /nested/{document=**} {\n        match /collection/{collectionDocId} {\n          allow read: false;\n          allow create: true;\n          allow list: false;\n          allow update: true;\n        }\n        match /someOtherCollection/{someOtherCollectionDocId} {\n          allow read: false;\n          allow create: true;\n          allow list: false;\n          allow update: true;\n          match /someOtherCollectionChildCollection/{document=**} {\n            allow read: false;\n            allow write: true;\n            match /someDeeplyNestedCollection/{someDeeplyNestedDocId} {\n            }\n          }\n        }\n      }\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /example/{document=**} {\n      match /nested/{document=**} {\n        match /collection/{collectionDocId} {\n          allow read: if false;\n          allow create: if true;\n          allow list: if false;\n          allow update: if true;\n        }\n        match /someOtherCollection/{someOtherCollectionDocId} {\n          allow read: if false;\n          allow create: if true;\n          allow list: if false;\n          allow update: if true;\n          match /someOtherCollectionChildCollection/{document=**} {\n            allow read: if false;\n            allow write: if true;\n            match /someDeeplyNestedCollection/{someDeeplyNestedDocId} {\n            }\n          }\n        }\n      }\n    }\n  }\n}');
 });
 
 // XXX: Still not convinced? I don't blame you, but stick with me...
@@ -105,12 +105,12 @@ test('that we can reference variables that support scope', function() {
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /secrets/secretOwnerId {
-  //       allow read: request.auth.uid != null && request.auth.uid === secretOwnerId;
+  //       allow read: if request.auth.uid != null && request.auth.uid === secretOwnerId;
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /secrets/secretOwnerId {\n      allow read: request.auth.uid != null && request.auth.uid === secretOwnerId;\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /secrets/secretOwnerId {\n      allow read: if request.auth.uid != null && request.auth.uid === secretOwnerId;\n    }\n  }\n}');
 });
 
 // XXX: Okay, here, things start to get a little interesting.
@@ -147,13 +147,13 @@ test('that complex expressions can be defined', function() {
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /atomic/docId {
-  //       allow list: request.query.offset == null || request.query.offset == 0;
-  //       allow update: !request.resource.data.deleted && request.resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId;
+  //       allow list: if request.query.offset == null || request.query.offset == 0;
+  //       allow update: if !request.resource.data.deleted && request.resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId;
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /atomic/docId {\n      allow list: request.query.offset == null || request.query.offset == 0;\n      allow update: !request.resource.data.deleted && request.resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId;\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /atomic/docId {\n      allow list: if request.query.offset == null || request.query.offset == 0;\n      allow update: if !request.resource.data.deleted && request.resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId;\n    }\n  }\n}');
 });
 
 // XXX: Neat, right? How about referencing collections using relative paths?
@@ -188,14 +188,14 @@ test('that sofia supports transactions and relative path definitions', function(
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /report/reportId {
-  //       allow create: !exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid));
+  //       allow create: if !exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid));
   //       match /flag/flagId {
   //       }
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/reportId {\n      allow create: !exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid));\n      match /flag/flagId {\n      }\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/reportId {\n      allow create: if !exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid));\n      match /flag/flagId {\n      }\n    }\n  }\n}');
   console.log(rules);
   expect(true).toBeTruthy();
 });

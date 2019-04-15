@@ -74,8 +74,8 @@ After a call to `sofia`, the returned JSON is as follows:
 service cloud.firestore {
   match /databases/{database}/documents {
     match /atomic/docId {
-      allow list: request.query.offset == null || request.query.offset == 0;
-      allow update: !request.resource.data.deleted && request.resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId;
+      allow list: if request.query.offset == null || request.query.offset == 0;
+      allow update: if !request.resource.data.deleted && request.resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId;
     }
   }
 }
