@@ -61,4 +61,4 @@ typings/
 .next
 
 # dont save the lockfile
-package.lock
+package-lock
