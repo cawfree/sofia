@@ -386,7 +386,7 @@ function rules(def, stack = [], ref, pwd = '', indent = 2, str = '') {
             $ref,
           } = entity;
           const scope = deref($ref);
-          const match = `$match /${relative}/${scope}`;
+          const match = `match /${relative}/${scope}`;
           const evaluated = rules(
             entity,
             nextStack,
