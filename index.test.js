@@ -196,9 +196,41 @@ test('that sofia supports transactions and relative path definitions', function(
   // }
   expect(rules)
     .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/reportId {\n      allow create: if !exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid));\n      match /flag/flagId {\n      }\n    }\n  }\n}');
-  console.log(rules);
-  expect(true).toBeTruthy();
 });
+
+test('that variables can reference other variables in the parent scope', function() {
+ const rules = sofia(
+   undefined,
+   {
+     ['databases/{database}']: {
+       $ref: 'documents',
+       $variable: {
+         nextDoc: 'request.resource.data',
+         userId: 'request.auth.uid',
+       },
+       outer: {
+         $variable: {
+           outerVariable: 'nextDoc.obj',
+         },
+         $read: 'outerVariable != null',
+         inner: {
+           $ref: 'innerRefId',
+            $variable: {
+              innerVariable: 'outerVariable.userId',
+            },
+           $create: 'innerVariable == userId',
+         },
+       },
+     },
+   },
+ );
+  console.log(rules);
+  print(rules);
+  expect(sofia())
+    .toEqual('service cloud.firestore {\n}');
+});
+
+
 
 test('that sofia represents complex rules ', function() {
   expect(sofia())

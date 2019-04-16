@@ -7,6 +7,11 @@ const {
 
 const flatten = require('lodash.flatten');
 
+const globalIdentifiers = {
+  request: {},
+  resource: {},
+};
+
 // TODO: should enforce that variables dont have the same
 //       name as a reference
 const solve = (obj, mode = '$reference', prev = '') => flatten(Object.entries(obj)
@@ -311,8 +316,15 @@ const dictionary = Object.entries(
     $existsAfter: {
       identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `existsAfter(${str})`),
     },
+    // XXX: This is where variables propagate.
     $reference: {
-      identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path,  str => (str)),
+      identify: (def, stack, ref, pwd, path) => {
+        // XXX: Paths can reference prefined variables.
+        const a = parse(path);
+        const x =  shouldPath(def, stack, ref, pwd, path,  str => (str));
+        console.log(JSON.stringify(a));
+        return x;
+      },
     },
     // XXX: Reserved field placeholders.
     $ref: {
@@ -320,7 +332,8 @@ const dictionary = Object.entries(
         const {
           name,
         } = def;
-        if (name === ref) {
+        // XXX: The user my have referred to a language-global variable.
+        if (name === ref || (Object.keys(globalIdentifiers).indexOf(name) >= 0)) {
           return ref;
         }
         throw new Error(
