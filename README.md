@@ -36,8 +36,6 @@ const ensureNotDeleted = doc => `!${doc}.deleted`;
 // Ensures that a document's user information can never change.
 const ensureUserNotChanged = (next, last) => `${next}.userId == userId && ${next}.userId == ${last}.userId`;
 const rules = sofia(
-  // Use the default service; this could be a string like 'firebase.storage', if you wanted to write storage rules.
-  undefined,
   {
     // Define $variables that are scoped to the adjacent collections and their subcollections.
     // Note that variables are subject to by subcollections.

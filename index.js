@@ -1,4 +1,4 @@
-const {
+ const {
   parse,
 } = require('expression-eval');
 const {
@@ -436,19 +436,15 @@ function rules(def, stack = [], ref, pwd = '', indent = 2, str = '') {
 
 }
 
-module.exports = (
-  service = 'cloud.firestore',
-  defs = {},
-) => {
-  if (!service || typeof service !== 'string') {
-    throw new Error(
-      `Encountered unexpected service "${JSON.stringify(service)}", expected string."`,
-    );
+module.exports = (a, b) => {
+  const ta = typeof a;
+  const tb = typeof b;
+  if (ta === 'string' && tb === 'object') {
+    return `service ${a} {${rules(b)}\n}`;
+  } else if (ta === 'object' && !b) {
+    return `service cloud.firestore {${rules(a)}\n}`;
   }
-  if (!defs || typeof defs !== 'object') {
-    throw new Error(
-      `Encountered unexpected defs "${JSON.stringify(defs)}", expected object."`,
-    );
-  }
-  return `service ${service} {${rules(defs)}\n}`;
+  throw new Error(
+    `Unexpected invocation; expected a valid rules parameter, found ${ta}.`,
+  );
 };

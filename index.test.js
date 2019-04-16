@@ -2,22 +2,23 @@ const sofia = require('./');
 
 const print = inst => console.warn(JSON.stringify({ inst }));
 
-test('that a default service can be created', function() {
-  expect(sofia())
-    .toEqual('service cloud.firestore {\n}');
-});
+// TODO: Removed in preparation of variable support.
+//test('that a default service can be created', function() {
+//  expect(sofia())
+//    .toEqual('service cloud.firestore {\n}');
+//});
 
 test('that an invalid service cannot be created', function() {
   expect(() => sofia(0, {}))
     .toThrow();
   expect(() => sofia('firebase.storage', 'You can also use sofia to declare Firebase Storage rules.'))
     .toThrow();
+  expect(() => sofia('firebase.storage', {}).toEqual('service firebase.storage {\n}'));
 });
 
 // XXX: Looks like more work than .rules, right? Just wait...
 test('that a simple nested collections, references and rulesn can be defined', function() {
   const rules = sofia(
-    undefined,
     {
       ['databases/{database}']: {
         $ref: 'documents',
@@ -83,7 +84,6 @@ test('that a simple nested collections, references and rulesn can be defined', f
 // XXX: Still not convinced? I don't blame you, but stick with me...
 test('that we can reference variables that support scope', function() {
   const rules = sofia(
-    undefined,
     {
       ['databases/{database}']: {
         $ref: 'documents',
@@ -121,7 +121,6 @@ test('that complex expressions can be defined', function() {
   const ensureNotDeleted = doc => `!${doc}.deleted`;
   const ensureUserNotChanged = (next, last) => `${next}.userId == userId && ${next}.userId == ${last}.userId`;
   const rules = sofia(
-    undefined,
     {
       $variable: {
         nextDoc: 'request.resource.data',
@@ -159,7 +158,6 @@ test('that complex expressions can be defined', function() {
 // XXX: Neat, right? How about referencing collections using relative paths?
 test('that sofia supports transactions and relative path definitions', function() {
   const rules = sofia(
-    undefined,
     {
       ['databases/{database}']: {
         $variable: {
@@ -200,7 +198,6 @@ test('that sofia supports transactions and relative path definitions', function(
 
 test('that variables can reference other variables in the parent scope', function() {
   const rules = sofia(
-    undefined,
     {
       ['databases/{database}']: {
         $ref: 'documents',
