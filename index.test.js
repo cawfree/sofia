@@ -199,42 +199,44 @@ test('that sofia supports transactions and relative path definitions', function(
 });
 
 test('that variables can reference other variables in the parent scope', function() {
- const rules = sofia(
-   undefined,
-   {
-     ['databases/{database}']: {
-       $ref: 'documents',
-       $variable: {
-         nextDoc: 'request.resource.data',
-         userId: 'request.auth.uid',
-       },
-       outer: {
-         $variable: {
-           outerVariable: 'nextDoc.obj',
-         },
-         $read: 'outerVariable != null',
-         inner: {
-           $ref: 'innerRefId',
-            $variable: {
-              innerVariable: 'outerVariable.userId',
-            },
-           $create: 'innerVariable == userId',
-         },
-       },
-     },
-   },
- );
-  console.log(rules);
-  print(rules);
-  expect(sofia())
-    .toEqual('service cloud.firestore {\n}');
+  const rules = sofia(
+    undefined,
+    {
+      ['databases/{database}']: {
+        $ref: 'documents',
+        $variable: {
+          nextDoc: 'request.resource.data',
+          userId: 'request.auth.uid',
+        },
+        outer: {
+          $variable: {
+            outerVariable: 'nextDoc.obj',
+          },
+          $read: 'outerVariable != null',
+          inner: {
+            $ref: 'innerRefId',
+             $variable: {
+               innerVariable: 'outerVariable.userId',
+             },
+            $create: 'innerVariable == userId',
+          },
+        },
+      },
+    },
+  );
+  // XXX: This test evaluates to the following:
+  //  service cloud.firestore {
+  //    match /databases/{database}/documents {
+  //      match /outer/{document=**} {
+  //        allow read: if request.resource.data.obj != null;
+  //        match /inner/innerRefId {
+  //          allow create: if request.resource.data.obj.userId == request.auth.uid;
+  //        }
+  //      }
+  //    }
+  //  }
+  //
+  expect('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if request.resource.data.obj != null;\n      match /inner/innerRefId {\n        allow create: if request.resource.data.obj.userId == request.auth.uid;\n      }\n    }\n  }\n}')
+    .toEqual(rules);
 });
-
-
-
-test('that sofia represents complex rules ', function() {
-  expect(sofia())
-    .toEqual('service cloud.firestore {\n}');
-});
-
 

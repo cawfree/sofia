@@ -137,7 +137,10 @@ const syntax = {
       // TODO: This may be was 'computed' is for?
       resolved,
     } = (__sofia || {});
-    if (!resolved) {
+    // XXX: Global references are resolved by default.
+    // TODO: This will *NOT* be compatible outside of top-level declarations,
+    //       i.e. if the user has a nested child property called 'request'.
+    if (!resolved && (!globalIdentifiers[name])) {
       return identify(def, stack, ref, pwd);
     }
     return name;
@@ -157,7 +160,8 @@ const syntax = {
       );
     }
     // XXX: Decide whether to treat look ups as already resolved.
-    const resolved = object.type !== 'MemberExpression';
+    //      (This can happen when a global variable is used.
+    const resolved = (object.type !== 'MemberExpression');
     return `${evaluate(
       object,
       stack,
@@ -321,9 +325,15 @@ const dictionary = Object.entries(
       identify: (def, stack, ref, pwd, path) => {
         // XXX: Paths can reference prefined variables.
         const a = parse(path);
-        const x =  shouldPath(def, stack, ref, pwd, path,  str => (str));
-        console.log(JSON.stringify(a));
-        return x;
+        const y = evaluate(
+          {
+            ...a,
+          },
+          stack,
+          ref,
+          pwd,
+        );
+        return shouldPath(def, stack, ref, pwd, y,  str => (str));
       },
     },
     // XXX: Reserved field placeholders.
