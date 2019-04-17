@@ -441,6 +441,10 @@ const getVariables = (def) => {
     );
 };
 
+const parseRef = (str) => {
+  return ref;
+};
+
 function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
   const $variable = getVariables(
     def,
@@ -462,19 +466,23 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
       (str, [relative, entity]) => {
         const type = typeof entity;
         if (type === 'object') {
-          const absolute = `${pwd}/${relative}`;
           // XXX: Ensure $refs are visible within the scope of
           //      declaration.
           const {
             $ref,
           } = entity;
-          const scope = deref($ref);
-          const match = `match /${relative}/${scope}`;
+          const redacted = relative.substring(0, relative.lastIndexOf($ref) - 1);
+          console.log('redacted '+redacted+ ' from '+relative+' with ref '+$ref);
+          const absolute = `${pwd}/${relative}`;
+          const match = `match /${redacted}/${$ref}`;
+          const newPwd = `${pwd}/${redacted}`;
+          console.log('match '+match);
+          console.log('new pwd '+newPwd);
           const evaluated = rules(
             entity,
             nextStack,
-            scope,
-            `${pwd}/${relative}`,
+            $ref,
+            `${pwd}/${redacted}`,
             depth + 1,
             '',
           );
@@ -487,7 +495,8 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
       compile(
         def,
         nextStack,
-        deref(ref),
+        // TODO: Used to be deref, but now $refs are required.
+        ref,
         pwd,
         depth,
         str,
