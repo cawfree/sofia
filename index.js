@@ -102,19 +102,17 @@ function identify (def, stack, ref, pwd, depth) {
     );
   }
   // XXX: Compute the offset of the referenced variable from the current.
-  const offset = resolvedDepth;
-  const dir = [...Array(offset)]
-    .reduce(
-      (str) => {
-        return dirname(str);
-      },
-      pwd,
-    );
+  const offset = depth - resolvedDepth;
+  const newPath = pwd.split('/')
+    // TODO: How to find the root node length? This looks like hard coding around 'depth'.
+    .splice(0, offset + 4)
+    .join('/');
   return fn(
     def,
     stack,
     ref,
-    dir,
+    newPath,
+    //pwd,
     depth,
     path,
   );
@@ -288,6 +286,9 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
             .split(match)
             .join(`$(${i})`);
         } catch(e) {
+          // TODO: Need to catch whether the variable is defined
+          //       as a $ref, as we can treat these as technically
+          //       resolved.
           // TODO: Enforce this approach.
           console.warn(
             `Warning: Failed to resolve source of path "${match}.", will return unchanged. This behaviour will change in future.`,
@@ -475,7 +476,7 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
             //       of escaping all braces.
             $safeRef,
             // TODO:
-            `${pwd}/${redacted}${depth === 0 ? `/${$ref}` : ''}`,
+            `${pwd}/${redacted}${`/${$ref}`}`,
             depth + 1,
             '',
           );

@@ -154,10 +154,10 @@ test('that sofia supports transactions and relative path definitions', function(
         $userId: 'request.auth.uid',
         ['report/{reportId}']: {
           $exists: {
-            $flagExists: './../../../{database}/documents/report/$(reportId)/flag/$($userId)',
+            $flagExists: './../../../../../databases/{database}/documents//report/$(reportId)/flag/$($userId)',
           },
           $existsAfter: {
-            $flagExistsAfter: './$(reportId)/flag/$($userId)',
+            $flagExistsAfter: './flag/$($userId)',
           },
           $create: '!$flagExists && $flagExistsAfter',
           ['flag/{flagId}']: {
@@ -186,14 +186,19 @@ test('that variables can reference other variables in the parent scope', functio
       ['databases/{database}/documents']: {
         $nextDoc: 'request.resource.data',
         $userId: 'request.auth.uid',
-        ['outer/{document=**}']: {
+        ['outer/{outerDocId}']: {
           $getAfter: {
-            $outerVariable: './$($userId)',
+            $outerVariable: './',
           },
           $read: '$outerVariable != null',
           ['inner/{innerRefId}']: {
             $innerVariable: '$outerVariable.userId',
             $create: '$innerVariable == innerRefId',
+            ['innermost/{innermostRefId}']: {
+              $innermostVariable: '$innerVariable.innerId',
+              $read: '$innermostVariable != null',
+              $create: '$innerVariable != null',
+            },
           },
         },
       },
@@ -202,16 +207,20 @@ test('that variables can reference other variables in the parent scope', functio
   // XXX: This test evalutates to the following:
   // service cloud.firestore {
   //   match /databases/{database}/documents {
-  //     match /outer/{document=**} {
-  //       allow read: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)) != null);
+  //     match /outer/{outerDocId} {
+  //       allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)) != null);
   //       match /inner/{innerRefId} {
-  //         allow create: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)).userId == innerRefId);
+  //         allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId == innerRefId);
+  //         match /innermost/{innermostRefId} {
+  //           allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId.innerId != null);
+  //           allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId != null);
+  //         }
   //       }
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)) != null);\n      match /inner/{innerRefId} {\n        allow create: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)).userId == innerRefId);\n      }\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{outerDocId} {\n      allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)) != null);\n      match /inner/{innerRefId} {\n        allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId == innerRefId);\n        match /innermost/{innermostRefId} {\n          allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId.innerId != null);\n          allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId != null);\n        }\n      }\n    }\n  }\n}');
 });
 
 test('that documents can be referenced', function() {
