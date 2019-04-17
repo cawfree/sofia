@@ -106,9 +106,9 @@ After a call to `sofia`, the returned `.rules` are as follows:
 service cloud.firestore {
   match /databases/{database}/documents {
     match /outer/{document=**} {
-      allow read: if getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null;
+      allow read: if getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)) != null;
       match /inner/{innerRefId} {
-        allow create: if getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid;
+        allow create: if getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)).userId == request.auth.uid;
       }
     }
   }
