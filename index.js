@@ -383,28 +383,35 @@ const deref = e => `${e || '{document=**}'}`;
 
 const getVariables = (def) => {
   return Object.entries(def)
-    .filter(([key, value]) => {
-      const reserved = reservedKeys
-        .indexOf(key) >= 0;
-      const beginsWithDollar = key.charAt(0) === '$';
-      // XXX: Reserved fields are permitted to be
-      //      treated as variables if they support
-      //      extracts. This allows us to treat the
-      //      entire object as a variable.
-      if (reserved) {
-        const {
-          identify,
-        } = dictionary[key];
-        return !!identify;
-      }
-      return beginsWithDollar;
-    })
     .reduce(
-      (obj, [ key, value ]) => {
-        return ({
-          ...obj,
-          [key]: value,
-        });
+      (obj, [key, value]) => {
+        const reserved = reservedKeys
+          .indexOf(key) >= 0;
+        const beginsWithDollar = key.charAt(0) === '$';
+        if (reserved) {
+          const {
+            identify,
+          } = dictionary[key];
+          // XXX: Only items in the dictionary which provide
+          //      an 'identify' function can be treated as 
+          //      a variable.
+          //
+          // TODO: Test for presence of a function.
+          if (!!identify) {
+            return ({
+              ...obj,
+              [key]: value,
+            });
+          }
+          return obj;
+        }
+        if (beginsWithDollar) {
+          return ({
+            ...obj,
+            [key]: value,
+          });
+        }
+        return obj;
       },
       {},
     );
