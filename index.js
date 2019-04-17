@@ -126,7 +126,7 @@ const combine = (def, stack, ref, pwd, depth) => {
     right,
     operator,
   } = def;
-  return `${evaluate(left, stack, ref, pwd, depth)} ${operator} ${evaluate(right, stack, ref, pwd, depth)}`;
+  return `(${evaluate(left, stack, ref, pwd, depth)} ${operator} ${evaluate(right, stack, ref, pwd, depth)})`;
 };
 
 const syntax = {
@@ -195,7 +195,7 @@ const syntax = {
       argument,
       prefix,
     } = def;
-    return `${operator}${evaluate(argument, stack, ref, pwd, depth)}`;
+    return `(${operator}${evaluate(argument, stack, ref, pwd, depth)})`;
   },
 };
 
@@ -464,9 +464,7 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
         if (type === 'object') {
           const $ref = relative.substring(relative.lastIndexOf('/') + 1, relative.length);
           const redacted = relative.substring(0, relative.lastIndexOf($ref) - 1);
-          const absolute = `${pwd}/${relative}`;
           const match = `match /${redacted}/${$ref}`;
-          const newPwd = `${pwd}/${redacted}`;
           const evaluated = rules(
             entity,
             nextStack,
