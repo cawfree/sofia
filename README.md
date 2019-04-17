@@ -77,7 +77,7 @@ service cloud.firestore {
 
 It is also possible to use _transaction variables_:
 
-```json
+```
 {
   ['databases/{database}/documents']: {
     $nextDoc: 'request.resource.data',
