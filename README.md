@@ -75,7 +75,7 @@ service cloud.firestore {
 }
 ```
 
-It is also possible to use _transaction variables_; these permit us to interact with the results of transcions  such as `exists` or `getAfter` themselves, just as if they were like any other variable. These help clearly establish the relationships that exist between collections.
+It is also possible to use **transaction variables**; these permit us to interact with the results of transcions  such as `exists` or `getAfter` themselves, just as if they were like any other variable. These help clearly establish the relationships that exist between collections.
 
 ```javascript
 {
@@ -103,16 +103,16 @@ It is also possible to use _transaction variables_; these permit us to interact 
 After a call to `sofia`, the returned `.rules` are as follows:
 
 ```
-// service cloud.firestore {
-//   match /databases/{database}/documents {
-//     match /outer/{document=**} {
-//       allow read: if getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null;
-//       match /inner/innerRefId {
-//         allow create: if getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid;
-//       }
-//     }
-//   }
-/
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /outer/{document=**} {
+      allow read: if getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null;
+      match /inner/innerRefId {
+        allow create: if getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid;
+      }
+    }
+  }
+}
 ```
 
 For further information, check out [`index.test.js`](./index.test.js) to find a complete breakdown of the sofia syntax.
