@@ -59,19 +59,13 @@ function identify (def, stack, ref, pwd) {
       null,
     );
   if (!resolved) {
-    const resolvedRef = dictionary
-      .reduce(
-        (obj, [ k, v ]) => {
-          return (k === '$ref') && v;
-        },
-        null,
-      )
-        .deref(
-          def,
-          stack,
-          ref,
-          pwd,
-        );
+    const resolvedRef = dictionary['$ref']
+      .deref(
+        def,
+        stack,
+        ref,
+        pwd,
+      );
     if (!resolvedRef) {
       // XXX: The user may have supplied a reference.
       throw new Error(
@@ -84,7 +78,7 @@ function identify (def, stack, ref, pwd) {
     mode,
     path,
   } = resolved;
-  const fn = dictionary
+  const fn = Object.entries(dictionary)
     .filter(([, { identify }]) => (!!identify))
     .reduce(
       (fn, [key, { identify }]) => {
@@ -285,79 +279,83 @@ const shouldPath = (def, stack, ref, pwd, path, fn) => {
   );
 };
 
-const dictionary = Object.entries(
-  {
-    $variable: {
-      sortOrder: 0,
-    },
-    $read: {
-      compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'read'),
-    },
-    $write: {
-      compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'write'),
-    },
-    $create: {
-      compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'create'),
-    },
-    $list: {
-      compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'list'),
-    },
-    $update: {
-      compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'update'),
-    },
-    $delete: {
-      compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'delete'),
-    },
-    $get: {
-      identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `get(${str})`),
-    },
-    $getAfter: {
-      identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `getAfter(${str})`),
-    },
-    $exists: {
-      identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `exists(${str})`),
-    },
-    $existsAfter: {
-      identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `existsAfter(${str})`),
-    },
-    // XXX: This is where variables propagate.
-    $reference: {
-      identify: (def, stack, ref, pwd, path) => {
-        // XXX: Paths can reference prefined variables.
-        const a = parse(path);
-        const y = evaluate(
-          {
-            ...a,
-          },
-          stack,
-          ref,
-          pwd,
-        );
-        return shouldPath(def, stack, ref, pwd, y,  str => (str));
-      },
-    },
-    // XXX: Reserved field placeholders.
-    $ref: {
-      deref: (def, stack, ref, pwd) => {
-        const {
-          name,
-        } = def;
-        // XXX: The user my have referred to a language-global variable.
-        if (name === ref || (Object.keys(globalIdentifiers).indexOf(name) >= 0)) {
-          return ref;
-        }
-        throw new Error(
-          `Failed to resolve a variable  "${name}"!`,
-        );
-      },
+const dictionary = {
+//  $variable: {
+//    //sortOrder: 0,
+//  },
+  $read: {
+    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'read'),
+  },
+  $write: {
+    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'write'),
+  },
+  $create: {
+    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'create'),
+  },
+  $list: {
+    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'list'),
+  },
+  $update: {
+    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'update'),
+  },
+  $delete: {
+    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'delete'),
+  },
+  $get: {
+    exports: true,
+    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `get(${str})`),
+  },
+  $getAfter: {
+    exports: true,
+    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `getAfter(${str})`),
+  },
+  $exists: {
+    exports: true,
+    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `exists(${str})`),
+  },
+  $existsAfter: {
+    exports: true,
+    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `existsAfter(${str})`),
+  },
+  // XXX: This is where variables propagate.
+  $reference: {
+    identify: (def, stack, ref, pwd, path) => {
+      // XXX: Paths can reference prefined variables.
+      const a = parse(path);
+      const y = evaluate(
+        {
+          ...a,
+        },
+        stack,
+        ref,
+        pwd,
+      );
+      return shouldPath(def, stack, ref, pwd, y,  str => (str));
     },
   },
-)
-  .sort(([, e1], [, e2]) => {
-    return (e1.sortOrder || Number.MAX_VALUE) - (e2.sortOrder || Number.MAX_VALUE);
-  });
+  // XXX: Reserved field placeholders.
+  $ref: {
+    deref: (def, stack, ref, pwd) => {
+      const {
+        name,
+      } = def;
+      // XXX: The user my have referred to a language-global variable.
+      if (name === ref || (Object.keys(globalIdentifiers).indexOf(name) >= 0)) {
+        return ref;
+      }
+      throw new Error(
+        `Failed to resolve a variable  "${name}"!`,
+      );
+    },
+  },
+};
+//  },
+//)
+//  .sort(([, e1], [, e2]) => {
+//    return (e1.sortOrder || Number.MAX_VALUE) - (e2.sortOrder || Number.MAX_VALUE);
+//  });
 
-const reservedKeys = dictionary
+const reservedKeys = Object.entries(dictionary)
   .map(([key]) => key);
 
 const getIndent = indent => [...Array(indent)]
@@ -365,7 +363,7 @@ const getIndent = indent => [...Array(indent)]
   .join('');
 
 const compile = (def, stack, ref, pwd, indent, str) => {
-   return dictionary
+   return Object.entries(dictionary)
     .filter(([, { compile }]) => (!!compile))
     .filter(([mode]) => (def.hasOwnProperty(mode)))
     .reduce(
@@ -385,10 +383,39 @@ const compile = (def, stack, ref, pwd, indent, str) => {
 
 const deref = e => `${e || '{document=**}'}`;
 
+const getVariables = (def) => {
+  return Object.entries(def)
+    .filter(([key, value]) => {
+      const reserved = reservedKeys
+        .indexOf(key) >= 0;
+      const beginsWithDollar = key.charAt(0) === '$';
+      // XXX: Reserved fields are permitted to be
+      //      treated as variables if they support
+      //      extracts. This allows us to treat the
+      //      entire object as a variable.
+      if (reserved) {
+        const {
+          exports,
+        } = dictionary[key];
+        return exports;
+      }
+      return beginsWithDollar;
+    })
+    .reduce(
+      (obj, [ key, value ]) => {
+        return ({
+          ...obj,
+          [key]: value,
+        });
+      },
+      {},
+    );
+};
+
 function rules(def, stack = [], ref, pwd = '', indent = 2, str = '') {
-  const {
-    $variable,
-  } = def;
+  const $variable = getVariables(
+    def,
+  );
   const nextStack = [
     ...stack,
     $variable,
@@ -398,6 +425,10 @@ function rules(def, stack = [], ref, pwd = '', indent = 2, str = '') {
     def,
   )
     .filter(([key]) => reservedKeys.indexOf(key) < 0)
+    .filter(([key]) => {
+      const isVariable = $variable.hasOwnProperty(key);
+      return !isVariable;
+    })
     .reduce(
       (str, [relative, entity]) => {
         const type = typeof entity;
