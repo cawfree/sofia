@@ -1,5 +1,6 @@
 const sofia = require('./');
 
+
 const print = inst => console.warn(JSON.stringify({ inst }));
 
 // TODO: Removed in preparation of variable support.

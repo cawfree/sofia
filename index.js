@@ -14,7 +14,7 @@ const globalIdentifiers = {
 
 // TODO: should enforce that variables dont have the same
 //       name as a reference
-const solve = (obj, mode = '$reference', prev = '') => flatten(Object.entries(obj)
+const solve = (obj, mode = '$reference', depth = 0, prev = '') => flatten(Object.entries(obj)
   .map(
     (entry) => {
       const [k, v] = entry;
@@ -22,9 +22,11 @@ const solve = (obj, mode = '$reference', prev = '') => flatten(Object.entries(ob
         return solve(
           v,
           k, 
+          depth + 1,
         );
       }
       return {
+        depth,
         mode,
         name: k,
         path: v,
@@ -302,19 +304,15 @@ const dictionary = {
     compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'delete'),
   },
   $get: {
-    exports: true,
     identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `get(${str})`),
   },
   $getAfter: {
-    exports: true,
     identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `getAfter(${str})`),
   },
   $exists: {
-    exports: true,
     identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `exists(${str})`),
   },
   $existsAfter: {
-    exports: true,
     identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `existsAfter(${str})`),
   },
   // XXX: This is where variables propagate.
@@ -395,9 +393,9 @@ const getVariables = (def) => {
       //      entire object as a variable.
       if (reserved) {
         const {
-          exports,
+          identify,
         } = dictionary[key];
-        return exports;
+        return !!identify;
       }
       return beginsWithDollar;
     })
