@@ -1,6 +1,5 @@
 const sofia = require('./');
 
-
 const print = (inst) => {
   console.log(inst);
   console.warn(JSON.stringify({ inst }));
@@ -89,7 +88,7 @@ test('that we can reference variables that support scope', function() {
         // XXX: Global variables across the database documents.
         //      (These can be overwritten by scope.)
         $userId: 'request.auth.uid',
-        ['secrets/secretOwnerId']: {
+        ['secrets/{secretOwnerId}']: {
           // XXX: A $ref has the visibility within the collection
           //      as an identifier of the source document.
           $read: '$userId != null && $userId === secretOwnerId',
@@ -100,13 +99,13 @@ test('that we can reference variables that support scope', function() {
   // XXX: This test evaluates to the following:
   // service cloud.firestore {
   //   match /databases/{database}/documents {
-  //     match /secrets/secretOwnerId {
+  //     match /secrets/{secretOwnerId} {
   //       allow read: if ((request.auth.uid != null) && (request.auth.uid === secretOwnerId));
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /secrets/secretOwnerId {\n      allow read: if ((request.auth.uid != null) && (request.auth.uid === secretOwnerId));\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /secrets/{secretOwnerId} {\n      allow read: if ((request.auth.uid != null) && (request.auth.uid === secretOwnerId));\n    }\n  }\n}');
 });
 
 // XXX: Okay, here, things start to get a little interesting.
@@ -123,7 +122,7 @@ test('that complex expressions can be defined', function() {
       $userId: 'request.auth.uid',
       $offset: 'request.query.offset',
       ['databases/{database}/documents']: {
-        ['atomic/docId']: {
+        ['atomic/{document=**}']: {
           $list: '$offset == null || $offset == 0',
           $update: [
             ensureNotDeleted('$nextDoc'),
@@ -134,18 +133,17 @@ test('that complex expressions can be defined', function() {
       },
     },
   );
-  print(rules);
   // XXX: This test evaluates to the following:
   // service cloud.firestore {
   //   match /databases/{database}/documents {
-  //     match /atomic/docId {
+  //     match /atomic/{document=**} {
   //       allow list: if ((request.query.offset == null) || (request.query.offset == 0));
   //       allow update: if (((!request.resource.data.deleted) && (request.resource.data.userId == request.auth.uid)) && (request.resource.data.userId == resource.data.userId));
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /atomic/docId {\n      allow list: if ((request.query.offset == null) || (request.query.offset == 0));\n      allow update: if (((!request.resource.data.deleted) && (request.resource.data.userId == request.auth.uid)) && (request.resource.data.userId == resource.data.userId));\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /atomic/{document=**} {\n      allow list: if ((request.query.offset == null) || (request.query.offset == 0));\n      allow update: if (((!request.resource.data.deleted) && (request.resource.data.userId == request.auth.uid)) && (request.resource.data.userId == resource.data.userId));\n    }\n  }\n}');
 });
 
 // XXX: Neat, right? How about referencing collections using relative paths?
@@ -154,7 +152,7 @@ test('that sofia supports transactions and relative path definitions', function(
     {
       ['databases/{database}/documents']: {
         $userId: 'request.auth.uid',
-        ['report/reportId']: {
+        ['report/{reportId}']: {
           $exists: {
             $flagExists: './../../../databases/{database}/report/$(reportId)/flag/$($userId)',
           },
@@ -162,24 +160,24 @@ test('that sofia supports transactions and relative path definitions', function(
             $flagExistsAfter: './$(reportId)/flag/$($userId)',
           },
           $create: '!$flagExists && $flagExistsAfter',
-          ['flag/flagId']: {
+          ['flag/{flagId}']: {
           },
         },
       },
     },
   );
-  // XXX: This test evaluates to the following:
+  // XXX: This test evaluates to the following:.
   // service cloud.firestore {
   //   match /databases/{database}/documents {
-  //     match /atomic/docId {
-  //       allow list: if ((request.query.offset == null) || (request.query.offset == 0));
-  //       allow update: if (((!request.resource.data.deleted) && (request.resource.data.userId == request.auth.uid)) && (request.resource.data.userId == resource.data.userId));
+  //     match /report/{reportId} {
+  //       allow create: if ((!exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)));
+  //       match /flag/{flagId} {
+  //       }
   //     }
   //   }
   // }
-  print(rules);
-  expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/reportId {\n      allow create: if ((!exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)));\n      match /flag/flagId {\n      }\n    }\n  }\n}');
+  expect('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/{reportId} {\n      allow create: if ((!exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)));\n      match /flag/{flagId} {\n      }\n    }\n  }\n}')
+    .toEqual(rules);
 });
 
 test('that variables can reference other variables in the parent scope', function() {
@@ -193,25 +191,39 @@ test('that variables can reference other variables in the parent scope', functio
             $outerVariable: './$($userId)',
           },
           $read: '$outerVariable != null',
-          ['inner/innerRefId']: {
+          ['inner/{innerRefId}']: {
             $innerVariable: '$outerVariable.userId',
-            $create: '$innerVariable == $userId',
+            $create: '$innerVariable == innerRefId',
           },
         },
       },
     },
   );
-  // XXX: This test evaluates to the following:
+  // XXX: This test evalutates to the following:
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /outer/{document=**} {
   //       allow read: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null);
-  //       match /inner/innerRefId {
-  //         allow create: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid);
+  //       match /inner/{innerRefId} {
+  //         allow create: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == innerRefId);
   //       }
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null);\n      match /inner/innerRefId {\n        allow create: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid);\n      }\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null);\n      match /inner/{innerRefId} {\n        allow create: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == innerRefId);\n      }\n    }\n  }\n}');
 });
+
+test('that documents can be referenced', function() {
+  const rules = sofia(
+    {
+      $userId: 'request.auth.uid',
+      ['databases/{database}/{someDocId}']: {
+        $read: 'someDocId == $userId',
+      },
+    },
+  );
+  expect(rules)
+    .toBeTruthy();
+});
+

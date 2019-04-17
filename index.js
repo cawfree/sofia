@@ -465,10 +465,15 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
           const $ref = relative.substring(relative.lastIndexOf('/') + 1, relative.length);
           const redacted = relative.substring(0, relative.lastIndexOf($ref) - 1);
           const match = `match /${redacted}/${$ref}`;
+          const $safeRef = $ref.replace(/[{}]/g,'');
           const evaluated = rules(
             entity,
             nextStack,
-            $ref,
+            // XXX: Collection variables must be removed from their reference
+            //      context before they can be referred to as an in-line variable.
+            // TODO: Should verify that we were supplied a valid variable, instead
+            //       of escaping all braces.
+            $safeRef,
             `${pwd}/${redacted}`,
             depth + 1,
             '',
