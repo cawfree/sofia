@@ -75,7 +75,47 @@ service cloud.firestore {
 }
 ```
 
-For further information, check out `index.test.js` to find a complete breakdown of the sofia syntax.
+It is also possible to use _transaction variables_:
+
+```json
+{
+  ['databases/{database}/documents']: {
+    $nextDoc: 'request.resource.data',
+    $userId: 'request.auth.uid',
+    ['outer/{document=**}']: {
+      // Declare a number of $getAfter variables within the scope
+      // of the 'outer' collection and its subcollections.
+      $getAfter: {
+        $outerVariable: './$($userId)',
+      },
+      $read: '$outerVariable != null',
+      ['inner/innerRefId']: {
+        // It is possible to even parse data out of the result
+        // of a transaction from an adjacent cell!
+        $innerVariable: '$outerVariable.userId',
+        $create: '$innerVariable == $userId',
+      },
+    },
+  },
+}
+```
+
+See how much time we've saved:
+
+```
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     match /outer/{document=**} {
+//       allow read: if getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null;
+//       match /inner/innerRefId {
+//         allow create: if getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid;
+//       }
+//     }
+//   }
+/
+```
+
+For further information, check out [`index.test.js`](./index.test.js) to find a complete breakdown of the sofia syntax.
 
 ## ✌️ Credits
 Made possible by [expression-eval](https://www.npmjs.com/package/expression-eval).
