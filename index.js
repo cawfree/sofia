@@ -356,11 +356,11 @@ const dictionary = {
 const reservedKeys = Object.entries(dictionary)
   .map(([key]) => key);
 
-const getIndent = indent => [...Array(indent)]
+const getIndent = depth => [...Array((depth + 1) * 2)]
   .map(() => ' ')
   .join('');
 
-const compile = (def, stack, ref, pwd, indent, str) => {
+const compile = (def, stack, ref, pwd, depth, str) => {
    return Object.entries(dictionary)
     .filter(([, { compile }]) => (!!compile))
     .filter(([mode]) => (def.hasOwnProperty(mode)))
@@ -373,7 +373,7 @@ const compile = (def, stack, ref, pwd, indent, str) => {
           pwd,
           str,
         )}`;
-        return `${str}\n${getIndent(indent)}${statement}`;
+        return `${str}\n${getIndent(depth)}${statement}`;
       },
       str,
     );
@@ -417,7 +417,7 @@ const getVariables = (def) => {
     );
 };
 
-function rules(def, stack = [], ref, pwd = '', indent = 2, str = '') {
+function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
   const $variable = getVariables(
     def,
   );
@@ -451,10 +451,10 @@ function rules(def, stack = [], ref, pwd = '', indent = 2, str = '') {
             nextStack,
             scope,
             `${pwd}/${relative}`,
-            indent + 2,
+            depth + 1,
             '',
           );
-          return `${str}\n${getIndent(indent)}${match} {${evaluated}\n${getIndent(indent)}}`;
+          return `${str}\n${getIndent(depth)}${match} {${evaluated}\n${getIndent(depth)}}`;
         }
         throw new Error(
           `Encountered unexpected token, "${entity}" of type ${type}.`,
@@ -465,7 +465,7 @@ function rules(def, stack = [], ref, pwd = '', indent = 2, str = '') {
         nextStack,
         deref(ref),
         pwd,
-        indent,
+        depth,
         str,
       ),
     );
