@@ -203,28 +203,25 @@ test('that variables can reference other variables in the parent scope', functio
           $read: '$outerVariable != null',
           inner: {
             $ref: 'innerRefId',
-            $innerVariable: '$outerVariable',
+            $innerVariable: '$outerVariable.userId',
             $create: '$innerVariable == $userId',
           },
         },
       },
     },
   );
-  console.log(rules);
-  expect(true).toBeTruthy();
   // XXX: This test evaluates to the following:
-  //  service cloud.firestore {
-  //    match /databases/{database}/documents {
-  //      match /outer/{document=**} {
-  //        allow read: if request.resource.data.obj != null;
-  //        match /inner/innerRefId {
-  //          allow create: if request.resource.data.obj.userId == request.auth.uid;
-  //        }
-  //      }
-  //    }
-  //  }
-  //
-//  expect('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if request.resource.data.obj != null;\n      match /inner/innerRefId {\n        allow create: if request.resource.data.obj.userId == request.auth.uid;\n      }\n    }\n  }\n}')
-//    .toEqual(rules);
+  // service cloud.firestore {
+  //   match /databases/{database}/documents {
+  //     match /outer/{document=**} {
+  //       allow read: if getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null;
+  //       match /inner/innerRefId {
+  //         allow create: if getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid;
+  //       }
+  //     }
+  //   }
+  // }
+  expect(rules)
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null;\n      match /inner/innerRefId {\n        allow create: if getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid;\n      }\n    }\n  }\n}');
 });
 

@@ -3,6 +3,8 @@
 } = require('expression-eval');
 const {
   resolve,
+  dirname,
+  sep
 } = require('path');
 
 const flatten = require('lodash.flatten');
@@ -14,15 +16,15 @@ const globalIdentifiers = {
 
 // TODO: should enforce that variables dont have the same
 //       name as a reference
-const solve = (obj, mode = '$reference', depth = 0, prev = '') => flatten(Object.entries(obj)
+const solve = (obj, depth, mode = '$reference', prev = '') => flatten(Object.entries(obj)
   .map(
     (entry) => {
       const [k, v] = entry;
       if (v !== null && typeof v === 'object') {
         return solve(
           v,
+          depth,
           k, 
-          depth + 1,
         );
       }
       return {
@@ -48,15 +50,17 @@ const search = (solved, name) => {
     );
 };
 
-function identify (def, stack, ref, pwd) {
+function identify (def, stack, ref, pwd, depth) {
   const {
     name,
   } = def;
   const resolved = [...stack]
     .reverse()
     .reduce(
-      (obj, ctx) => {
-        return (obj || search(solve(ctx), name));
+      (obj, ctx, index) => {
+        // XXX: The index tracks the depth of the context
+        //      within the stack.
+        return (obj || search(solve(ctx, index), name));
       },
       null,
     );
@@ -67,6 +71,7 @@ function identify (def, stack, ref, pwd) {
         stack,
         ref,
         pwd,
+        depth,
       );
     if (!resolvedRef) {
       // XXX: The user may have supplied a reference.
@@ -79,6 +84,7 @@ function identify (def, stack, ref, pwd) {
   const {
     mode,
     path,
+    depth: resolvedDepth,
   } = resolved;
   const fn = Object.entries(dictionary)
     .filter(([, { identify }]) => (!!identify))
@@ -95,33 +101,43 @@ function identify (def, stack, ref, pwd) {
       `Development: Failed to resolve handler "${mode}"!`,
     );
   }
+  // XXX: Compute the offset of the referenced variable from the current.
+  const offset = resolvedDepth;
+  const dir = [...Array(offset)]
+    .reduce(
+      (str) => {
+        return dirname(str);
+      },
+      pwd,
+    );
   return fn(
     def,
     stack,
     ref,
-    pwd,
+    dir,
+    depth,
     path,
   );
 };
 
-const combine = (def, stack, ref, pwd) => {
+const combine = (def, stack, ref, pwd, depth) => {
   const {
     left,
     right,
     operator,
   } = def;
-  return `${evaluate(left, stack, ref, pwd)} ${operator} ${evaluate(right, stack, ref, pwd)}`;
+  return `${evaluate(left, stack, ref, pwd, depth)} ${operator} ${evaluate(right, stack, ref, pwd, depth)}`;
 };
 
 const syntax = {
-  Literal: (def, stack, ref, pwd) => {
+  Literal: (def, stack, ref, pwd, depth) => {
     const {
       raw,
       value,
     } = def;
     return `${raw || value}`;
   },
-  Identifier: (def, stack, ref, pwd) => {
+  Identifier: (def, stack, ref, pwd, depth) => {
     const {
       name,
       __sofia,
@@ -137,13 +153,13 @@ const syntax = {
     // TODO: This will *NOT* be compatible outside of top-level declarations,
     //       i.e. if the user has a nested child property called 'request'.
     if (!resolved && (!globalIdentifiers[name])) {
-      return identify(def, stack, ref, pwd);
+      return identify(def, stack, ref, pwd, depth);
     }
     return name;
   },
-  LogicalExpression: (def, stack, ref, pwd) => combine(def, stack, ref, pwd),
-  BinaryExpression: (def, stack, ref, pwd) => combine(def, stack, ref, pwd),
-  MemberExpression: (def, stack, ref, pwd) => {
+  LogicalExpression: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+  BinaryExpression: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+  MemberExpression: (def, stack, ref, pwd, depth) => {
     const {
       computed,
       object,
@@ -163,25 +179,27 @@ const syntax = {
       stack,
       ref,
       pwd,
+      depth,
     )}.${evaluate(
       // XXX: Properties should always be treated as resolved.
       { ...property, __sofia: { ...__sofia, resolved: true } },
       stack,
       ref,
       pwd,
+      depth,
     )}`;
   },
-  UnaryExpression: (def, stack, ref, pwd) => {
+  UnaryExpression: (def, stack, ref, pwd, depth) => {
     const {
       operator,
       argument,
       prefix,
     } = def;
-    return `${operator}${evaluate(argument, stack, ref, pwd)}`;
+    return `${operator}${evaluate(argument, stack, ref, pwd, depth)}`;
   },
 };
 
-function evaluate(def, stack, ref, pwd) {
+function evaluate(def, stack, ref, pwd, depth) {
   const {
     type,
   } = def;
@@ -191,6 +209,7 @@ function evaluate(def, stack, ref, pwd) {
       stack, 
       ref,
       pwd,
+      depth,
     )}`;
   }
   throw new Error(
@@ -198,12 +217,13 @@ function evaluate(def, stack, ref, pwd) {
   );
 }
 
-const shouldCompile = (def, stack, ref, pwd, str, mode) => {
+const shouldCompile = (def, stack, ref, pwd, depth, str, mode) => {
   return `allow ${mode}: if ${evaluate(
     def,
     stack,
     ref,
     pwd,
+    depth,
   )};`;
 };
 
@@ -224,7 +244,7 @@ const escapeBraces = (path) => {
 };
 
 // XXX: Turns relative path references into absolute ones.
-const expandPath = (def, stack, ref, pwd, path) => {
+const expandPath = (def, stack, ref, pwd, depth, path) => {
   if (path.startsWith('./')) {
     return resolve(
       pwd,
@@ -234,13 +254,14 @@ const expandPath = (def, stack, ref, pwd, path) => {
   return path;
 };
 
-const shouldPath = (def, stack, ref, pwd, path, fn) => {
+const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
   const absolute = escapeBraces(
     expandPath(
       def,
       stack,
       ref,
       pwd,
+      depth,
       path,
     ),
   );
@@ -261,6 +282,7 @@ const shouldPath = (def, stack, ref, pwd, path, fn) => {
             stack,
             ref,
             pwd,
+            depth,
           );
           return str
             .split(match)
@@ -286,38 +308,38 @@ const dictionary = {
 //    //sortOrder: 0,
 //  },
   $read: {
-    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'read'),
+    compile: (def, stack, ref, pwd, depth, str) => shouldCompile(def, stack, ref, pwd, depth, str, 'read'),
   },
   $write: {
-    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'write'),
+    compile: (def, stack, ref, pwd, depth, str) => shouldCompile(def, stack, ref, pwd, depth, str, 'write'),
   },
   $create: {
-    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'create'),
+    compile: (def, stack, ref, pwd, depth, str) => shouldCompile(def, stack, ref, pwd, depth, str, 'create'),
   },
   $list: {
-    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'list'),
+    compile: (def, stack, ref, pwd, depth, str) => shouldCompile(def, stack, ref, pwd, depth, str, 'list'),
   },
   $update: {
-    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'update'),
+    compile: (def, stack, ref, pwd, depth, str) => shouldCompile(def, stack, ref, pwd, depth, str, 'update'),
   },
   $delete: {
-    compile: (def, stack, ref, pwd, str) => shouldCompile(def, stack, ref, pwd, str, 'delete'),
+    compile: (def, stack, ref, pwd, depth, str) => shouldCompile(def, stack, ref, pwd, depth, str, 'delete'),
   },
   $get: {
-    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `get(${str})`),
+    identify: (def, stack, ref, pwd, depth, path) => shouldPath(def, stack, ref, pwd, depth, path, str => `get(${str})`),
   },
   $getAfter: {
-    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `getAfter(${str})`),
+    identify: (def, stack, ref, pwd, depth, path) => shouldPath(def, stack, ref, pwd, depth, path, str => `getAfter(${str})`),
   },
   $exists: {
-    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `exists(${str})`),
+    identify: (def, stack, ref, pwd, depth, path) => shouldPath(def, stack, ref, pwd, depth, path, str => `exists(${str})`),
   },
   $existsAfter: {
-    identify: (def, stack, ref, pwd, path) => shouldPath(def, stack, ref, pwd, path, str => `existsAfter(${str})`),
+    identify: (def, stack, ref, pwd, depth, path) => shouldPath(def, stack, ref, pwd, depth, path, str => `existsAfter(${str})`),
   },
   // XXX: This is where variables propagate.
   $reference: {
-    identify: (def, stack, ref, pwd, path) => {
+    identify: (def, stack, ref, pwd, depth, path) => {
       // XXX: Paths can reference prefined variables.
       const a = parse(path);
       const y = evaluate(
@@ -327,13 +349,14 @@ const dictionary = {
         stack,
         ref,
         pwd,
+        depth,
       );
-      return shouldPath(def, stack, ref, pwd, y,  str => (str));
+      return shouldPath(def, stack, ref, pwd, depth, y,  str => (str));
     },
   },
   // XXX: Reserved field placeholders.
   $ref: {
-    deref: (def, stack, ref, pwd) => {
+    deref: (def, stack, ref, pwd, depth) => {
       const {
         name,
       } = def;
@@ -371,6 +394,7 @@ const compile = (def, stack, ref, pwd, depth, str) => {
           stack,
           ref,
           pwd,
+          depth,
           str,
         )}`;
         return `${str}\n${getIndent(depth)}${statement}`;
