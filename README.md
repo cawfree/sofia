@@ -63,7 +63,7 @@ const rules = sofia(
   },
 );
 ```
-After a call to `sofia`, the returned JSON is as follows:
+After a call to `sofia`, the returned `.rules` are as follows:
 ```
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -75,9 +75,9 @@ service cloud.firestore {
 }
 ```
 
-It is also possible to use _transaction variables_:
+It is also possible to use _transaction variables_; these permit us to interact with the results of transcions  such as `exists` or `getAfter` themselves, just as if they were like any other variable. These help clearly establish the relationships that exist between collections.
 
-```
+```javascript
 {
   ['databases/{database}/documents']: {
     $nextDoc: 'request.resource.data',
@@ -100,7 +100,7 @@ It is also possible to use _transaction variables_:
 }
 ```
 
-See how much time we've saved:
+After a call to `sofia`, the returned `.rules` are as follows:
 
 ```
 // service cloud.firestore {
