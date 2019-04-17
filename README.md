@@ -46,7 +46,7 @@ const rules = sofia(
     ['databases/{database}/documents']: {
       // Define the reference of the existing collection. This object effectively
       // describes the database root as 'databases/{database}/documents'.
-      ['atomic/docId']: {
+      ['atomic/{docId}']: {
         // Here we define the list rule, where we state callers are permitted
         // to make list queries if they have provided a falsey offset. 
         // Looking at the global variables, offset refers to "request.query.offset".
@@ -67,7 +67,7 @@ After a call to `sofia`, the returned `.rules` are as follows:
 ```
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /atomic/docId {
+    match /atomic/{docId} {
       allow list: if request.query.offset == null || request.query.offset == 0;
       allow update: if !request.resource.data.deleted && request.resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId;
     }
@@ -89,7 +89,7 @@ It is also possible to use **transaction variables**; these permit us to interac
         $outerVariable: './$($userId)',
       },
       $read: '$outerVariable != null',
-      ['inner/innerRefId']: {
+      ['inner/{innerRefId}']: {
         // It is possible to even parse data out of the result
         // of a transaction from an adjacent cell!
         $innerVariable: '$outerVariable.userId',
@@ -107,7 +107,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /outer/{document=**} {
       allow read: if getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null;
-      match /inner/innerRefId {
+      match /inner/{innerRefId} {
         allow create: if getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == request.auth.uid;
       }
     }
