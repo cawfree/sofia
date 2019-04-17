@@ -43,12 +43,10 @@ const rules = sofia(
     $lastDoc: 'resource.data',
     $userId: 'request.auth.uid',
     $offset: 'request.query.offset',
-    ['databases/{database}']: {
+    ['databases/{database}/documents']: {
       // Define the reference of the existing collection. This object effectively
       // describes the database root as 'databases/{database}/documents'.
-      $ref: 'documents',
-      atomic: {
-        $ref: 'docId',
+      ['atomic/docId']: {
         // Here we define the list rule, where we state callers are permitted
         // to make list queries if they have provided a falsey offset. 
         // Looking at the global variables, offset refers to "request.query.offset".

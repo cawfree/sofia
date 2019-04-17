@@ -441,10 +441,6 @@ const getVariables = (def) => {
     );
 };
 
-const parseRef = (str) => {
-  return ref;
-};
-
 function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
   const $variable = getVariables(
     def,
@@ -466,18 +462,11 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
       (str, [relative, entity]) => {
         const type = typeof entity;
         if (type === 'object') {
-          // XXX: Ensure $refs are visible within the scope of
-          //      declaration.
-          const {
-            $ref,
-          } = entity;
+          const $ref = relative.substring(relative.lastIndexOf('/') + 1, relative.length);
           const redacted = relative.substring(0, relative.lastIndexOf($ref) - 1);
-          console.log('redacted '+redacted+ ' from '+relative+' with ref '+$ref);
           const absolute = `${pwd}/${relative}`;
           const match = `match /${redacted}/${$ref}`;
           const newPwd = `${pwd}/${redacted}`;
-          console.log('match '+match);
-          console.log('new pwd '+newPwd);
           const evaluated = rules(
             entity,
             nextStack,

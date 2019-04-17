@@ -22,30 +22,23 @@ test('that a simple nested collections, references and rulesn can be defined', f
   const rules = sofia(
     {
       ['databases/{database}/documents']: {
-        $ref: 'documents',
         ['example/{document=**}']: {
-          $ref: '{document=**}',
           ['nested/{document=**}']: {
-            $ref: '{document=**}',
             ['collection/{collectionDocId}']: {
-              $ref: '{collectionDocId}',
               $read: false,
               $list: false,
               $create: true,
               $update: true,
             },
             ['someOtherCollection/{someOtherCollectionDocId}']: {
-              $ref: '{someOtherCollectionDocId}',
               $read: false,
               $list: false,
               $create: true,
               $update: true,
               ['someOtherCollectionChildCollection/{document=**}']: {
-                $ref: '{document=**}',
                 $read: false,
                 $write: true,
                 ['someDeeplyNestedCollection/{someDeeplyNestedDocId}']: {
-                  $ref: '{someDeeplyNestedDocId}',
                 },
               },
             },
@@ -90,14 +83,12 @@ test('that we can reference variables that support scope', function() {
   const rules = sofia(
     {
       ['databases/{database}/documents']: {
-        $ref: 'documents',
         // XXX: Global variables across the database documents.
         //      (These can be overwritten by scope.)
         $userId: 'request.auth.uid',
         ['secrets/secretOwnerId']: {
           // XXX: A $ref has the visibility within the collection
           //      as an identifier of the source document.
-          $ref: 'secretOwnerId',
           $read: '$userId != null && $userId === secretOwnerId',
         },
       },
@@ -129,9 +120,7 @@ test('that complex expressions can be defined', function() {
       $userId: 'request.auth.uid',
       $offset: 'request.query.offset',
       ['databases/{database}/documents']: {
-        $ref: 'documents',
         ['atomic/docId']: {
-          $ref: 'docId',
           $list: '$offset == null || $offset == 0',
           $update: [
             ensureNotDeleted('$nextDoc'),
@@ -161,9 +150,7 @@ test('that sofia supports transactions and relative path definitions', function(
     {
       ['databases/{database}/documents']: {
         $userId: 'request.auth.uid',
-        $ref: 'documents',
         ['report/reportId']: {
-          $ref: 'reportId',
           $exists: {
             $flagExists: './../../../databases/{database}/report/$(reportId)/flag/$($userId)',
           },
@@ -172,7 +159,6 @@ test('that sofia supports transactions and relative path definitions', function(
           },
           $create: '!$flagExists && $flagExistsAfter',
           ['flag/flagId']: {
-            $ref: 'flagId',
           },
         },
       },
@@ -196,17 +182,14 @@ test('that variables can reference other variables in the parent scope', functio
   const rules = sofia(
     {
       ['databases/{database}/documents']: {
-        $ref: 'documents',
         $nextDoc: 'request.resource.data',
         $userId: 'request.auth.uid',
         ['outer/{document=**}']: {
-          $ref: '{document=**}',
           $getAfter: {
             $outerVariable: './$($userId)',
           },
           $read: '$outerVariable != null',
           ['inner/innerRefId']: {
-            $ref: 'innerRefId',
             $innerVariable: '$outerVariable.userId',
             $create: '$innerVariable == $userId',
           },
