@@ -34,17 +34,15 @@ In the example below, we provide an example of dynamically constructing a `sofia
 // Checks whether the referenced document is not deleted.
 const ensureNotDeleted = doc => `!${doc}.deleted`;
 // Ensures that a document's user information can never change.
-const ensureUserNotChanged = (next, last) => `${next}.userId == userId && ${next}.userId == ${last}.userId`;
+const ensureUserNotChanged = (next, last) => `${next}.userId == $userId && ${next}.userId == ${last}.userId`;
 const rules = sofia(
   {
     // Define $variables that are scoped to the adjacent collections and their subcollections.
     // Note that variables are subject to by subcollections.
-    $variable: {
-      nextDoc: 'request.resource.data',
-      lastDoc: 'resource.data',
-      userId: 'request.auth.uid',
-      offset: 'request.query.offset',
-    },
+    $nextDoc: 'request.resource.data',
+    $lastDoc: 'resource.data',
+    $userId: 'request.auth.uid',
+    $offset: 'request.query.offset',
     ['databases/{database}']: {
       // Define the reference of the existing collection. This object effectively
       // describes the database root as 'databases/{database}/documents'.
@@ -54,12 +52,12 @@ const rules = sofia(
         // Here we define the list rule, where we state callers are permitted
         // to make list queries if they have provided a falsey offset. 
         // Looking at the global variables, offset refers to "request.query.offset".
-        $list: 'offset == null || offset == 0',
+        $list: '$offset == null || $offset == 0',
         // Here we can execute additional conditions based upon the results of the 
         // function invocations.
         $update: [
-          ensureNotDeleted('nextDoc'),
-          ensureUserNotChanged('nextDoc', 'lastDoc'),
+          ensureNotDeleted('$nextDoc'),
+          ensureUserNotChanged('$nextDoc', '$lastDoc'),
         ]
           .join(' && '),
       },
