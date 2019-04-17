@@ -154,7 +154,7 @@ test('that sofia supports transactions and relative path definitions', function(
         $userId: 'request.auth.uid',
         ['report/{reportId}']: {
           $exists: {
-            $flagExists: './../../../databases/{database}/report/$(reportId)/flag/$($userId)',
+            $flagExists: './../../../{database}/documents/report/$(reportId)/flag/$($userId)',
           },
           $existsAfter: {
             $flagExistsAfter: './$(reportId)/flag/$($userId)',
@@ -170,13 +170,13 @@ test('that sofia supports transactions and relative path definitions', function(
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /report/{reportId} {
-  //       allow create: if ((!exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)));
+  //       allow create: if ((!exists(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid)));
   //       match /flag/{flagId} {
   //       }
   //     }
   //   }
   // }
-  expect('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/{reportId} {\n      allow create: if ((!exists(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/report/$(reportId)/flag/$(request.auth.uid)));\n      match /flag/{flagId} {\n      }\n    }\n  }\n}')
+  expect('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/{reportId} {\n      allow create: if ((!exists(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid)));\n      match /flag/{flagId} {\n      }\n    }\n  }\n}')
     .toEqual(rules);
 });
 
@@ -203,15 +203,15 @@ test('that variables can reference other variables in the parent scope', functio
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /outer/{document=**} {
-  //       allow read: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null);
+  //       allow read: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)) != null);
   //       match /inner/{innerRefId} {
-  //         allow create: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == innerRefId);
+  //         allow create: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)).userId == innerRefId);
   //       }
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)) != null);\n      match /inner/{innerRefId} {\n        allow create: if (getAfter(/databases/$(database)/outer/$(request.auth.uid)).userId == innerRefId);\n      }\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{document=**} {\n      allow read: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)) != null);\n      match /inner/{innerRefId} {\n        allow create: if (getAfter(/databases/$(database)/documents/outer/$(request.auth.uid)).userId == innerRefId);\n      }\n    }\n  }\n}');
 });
 
 test('that documents can be referenced', function() {

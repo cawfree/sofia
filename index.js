@@ -474,7 +474,8 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
             // TODO: Should verify that we were supplied a valid variable, instead
             //       of escaping all braces.
             $safeRef,
-            `${pwd}/${redacted}`,
+            // TODO:
+            `${pwd}/${redacted}${depth === 0 ? `/${$ref}` : ''}`,
             depth + 1,
             '',
           );
