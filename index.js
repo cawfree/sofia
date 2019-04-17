@@ -462,19 +462,16 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
       (str, [relative, entity]) => {
         const type = typeof entity;
         if (type === 'object') {
+          const $ref = relative.substring(relative.lastIndexOf('/') + 1, relative.length);
+          const redacted = relative.substring(0, relative.lastIndexOf($ref) - 1);
           const absolute = `${pwd}/${relative}`;
-          // XXX: Ensure $refs are visible within the scope of
-          //      declaration.
-          const {
-            $ref,
-          } = entity;
-          const scope = deref($ref);
-          const match = `match /${relative}/${scope}`;
+          const match = `match /${redacted}/${$ref}`;
+          const newPwd = `${pwd}/${redacted}`;
           const evaluated = rules(
             entity,
             nextStack,
-            scope,
-            `${pwd}/${relative}`,
+            $ref,
+            `${pwd}/${redacted}`,
             depth + 1,
             '',
           );
@@ -487,7 +484,8 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
       compile(
         def,
         nextStack,
-        deref(ref),
+        // TODO: Used to be deref, but now $refs are required.
+        ref,
         pwd,
         depth,
         str,
