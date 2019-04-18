@@ -364,7 +364,12 @@ const dictionary = {
       // XXX: The user my have referred to a language-global variable.
       if (name === ref || (Object.keys(globalIdentifiers).indexOf(name) >= 0)) {
         return ref;
+      } else if (pwd.includes(`{${name}}`)) {
+        // XXX: This indicates the variable was defined as a reference within
+        //      the collection path.
+        return name;
       }
+      console.log('did not resolve '+name+' with '+pwd);
       throw new Error(
         `Failed to resolve a variable  "${name}"!`,
       );
