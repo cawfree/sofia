@@ -26,8 +26,9 @@ Using `yarn`:
 yarn add @cawfree/sofia
 ```
 
-## ✍️ Syntax Example
+## ✍️ Syntax Examples
 
+### Simple Variables
 In the example below, we provide an example of dynamically constructing a `sofia`-compatible JSON object.
 
 ```javascript
@@ -75,6 +76,8 @@ service cloud.firestore {
 }
 ```
 
+### Transaction Variables
+
 It is also possible to use **transaction variables**; these permit us to interact with the results of transcions  such as `exists` or `getAfter` themselves, just as if they were like any other variable. These help clearly establish the relationships that exist between collections.
 
 ```javascript
@@ -114,6 +117,8 @@ service cloud.firestore {
   }
 }
 ```
+
+### Conditions
 
 It is even possible to define **conditions**. This help clearly define which rules need to be processed based upon a previous condition; there's nothing _special_ going on here, conditions merely resolve to a lazy evaluation of _both_ the positive and negative condition.
 
