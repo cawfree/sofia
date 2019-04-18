@@ -115,6 +115,53 @@ service cloud.firestore {
 }
 ```
 
+It is even possible to define **conditions**. This help clearly define which rules need to be processed based upon a previous condition; there's nothing _special_ going on here, conditions merely resolve to a lazy evaluation of _both_ the positive and negative condition.
+
+This block emphasises that `sofia` can result in more readable rule definitions, when handling more complex transactions.
+
+```javascript
+{
+  $nextDoc: 'request.resource.data',
+  $userId: 'request.auth.uid',
+  ['databases/{database}/documents']: {
+    ['user/{someUserId}']: {
+      $exists: {
+        $friendRecord: './../../friendsList/$(someUserId)/friend/$($userId)',
+      },
+      $read: '!resource.data.deleted && ' + $ifel(
+        'someUserId == $userId',
+        // All users are allowed to read their own documents.
+        () => 'true',
+        // If another user is trying to get the user information,
+        // make sure they are part of their friends first.
+        () => '$friendRecord',
+      ),
+    },
+    ['friendsList/{someFriendsListId}']: {
+      ['friend/{friendId}']: {
+
+      },
+    },
+  },
+}
+```
+
+After a call to `sofia`, the returned `.rules` are as follows. As you can see, the order of the evaluated conditions are preserved, without the headaches. 
+
+```
+ service cloud.firestore {
+   match /databases/{database}/documents {
+     match /user/{someUserId} {
+       allow read: if (((!resource.data.deleted) && ((someUserId == request.auth.uid) && true)) || ((!(someUserId == request.auth.uid)) && exists(/databases/$(database)/documents/friendsList/$(someUserId)/friend/$(request.auth.uid))));
+     }
+     match /friendsList/{someFriendsListId} {
+       match /friend/{friendId} {
+       }
+     }
+   }
+ }
+```
+
 For further information, check out [`index.test.js`](./index.test.js) to find a complete breakdown of the sofia syntax.
 
 ## ✌️ Credits

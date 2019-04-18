@@ -501,18 +501,31 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
         str,
       ),
     );
+};
 
-}
+// XXX: Structures rules so that different rule mechanisms can be
+//      defined based upon an evaluated condition. This is achieved
+//      using lazy evaluation.
+const $ifel = (
+  condition,
+  conditionMet,
+  conditionNotMet,
+) => {
+  return `((${condition}) && ${conditionMet()}) || (!(${condition}) && ${conditionNotMet()})`;
+};
 
-module.exports = (a, b) => {
-  const ta = typeof a;
-  const tb = typeof b;
-  if (ta === 'string' && tb === 'object') {
-    return `service ${a} {${rules(b)}\n}`;
-  } else if (ta === 'object' && !b) {
-    return `service cloud.firestore {${rules(a)}\n}`;
-  }
-  throw new Error(
-    `Unexpected invocation; expected a valid rules parameter, found ${ta}.`,
-  );
+module.exports = {
+  default: (a, b) => {
+    const ta = typeof a;
+    const tb = typeof b;
+    if (ta === 'string' && tb === 'object') {
+      return `service ${a} {${rules(b)}\n}`;
+    } else if (ta === 'object' && !b) {
+      return `service cloud.firestore {${rules(a)}\n}`;
+    }
+    throw new Error(
+      `Unexpected invocation; expected a valid rules parameter, found ${ta}.`,
+    );
+  },
+  $ifel,
 };

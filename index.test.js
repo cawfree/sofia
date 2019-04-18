@@ -1,4 +1,7 @@
-const sofia = require('./');
+const {
+  default: sofia,
+  $ifel,
+} = require('./');
 
 
 const print = (inst) => {
@@ -256,16 +259,48 @@ test('that variables can reference other variables in the parent scope', functio
     .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /vehicle/${vehicleId} {\n      allow update: if (get(/databases/$(database)/documents/batch/$(request.resource.data.batchId)) == request.resource.data.batchId);\n    }\n    match /batch/{batchId} {\n      allow update: if (get(/databases/$(database)/documents/vehicle/$(request.resource.data.vehicleId)) == batchId);\n    }\n    match /journey/{journeyId} {\n      allow update: if (get(/databases/$(database)/documents/batch/$(request.resource.data.batchId)) == journeyId);\n      match /points/{pointId} {\n        allow create: if (getAfter(/databases/$(database)/documents/journey/$(journeyId)/points/$(pointId)) != null);\n        allow update: if ((get(/databases/$(database)/documents/journey/$(journeyId)/points/$(pointId)) != null) && (get(/databases/$(database)/documents/batch/$(request.resource.data.batchId)) != null));\n      }\n    }\n  }\n}');
 });
 
-test('that documents can be referenced', function() {
+test('that we can easily define conditions', function() {
   const rules = sofia(
     {
+      $nextDoc: 'request.resource.data',
       $userId: 'request.auth.uid',
-      ['databases/{database}/{someDocId}']: {
-        $read: 'someDocId == $userId',
+      ['databases/{database}/documents']: {
+        ['user/{someUserId}']: {
+          $exists: {
+            $friendRecord: './../../friendsList/$(someUserId)/friend/$($userId)',
+          },
+          $read: '!resource.data.deleted && ' + $ifel(
+            'someUserId == $userId',
+            // All users are allowed to read their own documents.
+            () => 'true',
+            // If another user is trying to get the user information,
+            // make sure they are part of their friends first.
+            () => '$friendRecord',
+          ),
+        },
+        ['friendsList/{someFriendsListId}']: {
+          ['friend/{friendId}']: {
+
+          },
+        },
       },
     },
   );
+  // XXX: This test evaluates to the following:
+  // service cloud.firestore {
+  //   match /databases/{database}/documents {
+  //     match /user/{someUserId} {
+  //       allow read: if (((!resource.data.deleted) && ((someUserId == request.auth.uid) && true)) || ((!(someUserId == request.auth.uid)) && exists(/databases/$(database)/documents/friendsList/$(someUserId)/friend/$(request.auth.uid))));
+  //     }
+  //     match /friendsList/{someFriendsListId} {
+  //       match /friend/{friendId} {
+  //       }
+  //     }
+  //   }
+  // }
   expect(rules)
-    .toBeTruthy();
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /user/{someUserId} {\n      allow read: if (((!resource.data.deleted) && ((someUserId == request.auth.uid) && true)) || ((!(someUserId == request.auth.uid)) && exists(/databases/$(database)/documents/friendsList/$(someUserId)/friend/$(request.auth.uid))));\n    }\n    match /friendsList/{someFriendsListId} {\n      match /friend/{friendId} {\n      }\n    }\n  }\n}');
 });
+
+
 
