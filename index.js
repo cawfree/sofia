@@ -244,10 +244,11 @@ const escapeBraces = (path) => {
 // XXX: Turns relative path references into absolute ones.
 const expandPath = (def, stack, ref, pwd, depth, path) => {
   if (path.startsWith('./')) {
-    return resolve(
+    const x = resolve(
       pwd,
       path,
     );
+    return x;
   }
   return path;
 };
@@ -369,7 +370,6 @@ const dictionary = {
         //      the collection path.
         return name;
       }
-      console.log('did not resolve '+name+' with '+pwd);
       throw new Error(
         `Failed to resolve a variable  "${name}"!`,
       );
@@ -481,7 +481,7 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
             //       of escaping all braces.
             $safeRef,
             // TODO:
-            `${pwd}/${redacted}${`/${$ref}`}`,
+            `${pwd}/${redacted}/${$ref}`,
             depth + 1,
             '',
           );
@@ -496,7 +496,7 @@ function rules(def, stack = [], ref, pwd = '', depth = 0, str = '') {
         nextStack,
         // TODO: Used to be deref, but now $refs are required.
         ref,
-        pwd,
+        pwd+ '/$('+ref+')',
         depth,
         str,
       ),

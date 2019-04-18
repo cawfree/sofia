@@ -177,64 +177,64 @@ test('that sofia supports transactions and relative path definitions', function(
   //     }
   //   }
   // }
-  expect('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/{reportId} {\n      allow create: if ((!exists(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid)));\n      match /flag/{flagId} {\n      }\n    }\n  }\n}')
-    .toEqual(rules);
+  expect(rules)
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /report/{reportId} {\n      allow create: if ((!exists(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid))) && existsAfter(/databases/$(database)/documents/report/$(reportId)/flag/$(request.auth.uid)));\n      match /flag/{flagId} {\n      }\n    }\n  }\n}');
 });
 
-test('that variables can reference other variables in the parent scope', function() {
-  const rules = sofia(
-    {
-      ['databases/{database}/documents']: {
-        $userId: 'request.auth.uid',
-        $nextDoc: 'request.resource.data',
-        $userId: 'request.auth.uid',
-        ['vehicle/${vehicleId}']: {
-          $batchId: '$nextDoc.batchId',
-          $get: {
-            $batchBefore: './../batch/$($batchId)',
-          },
-          $getAfter: {
-            $batchAfter: './../batch/$($batchId)',
-          },
-          // Ensure the batch is marked as no longer
-          // belonging to this vehicle after having
-          // belonged to it.
-          //$update: '$batchBefore.vehicleId == vehicleId && $batchAfter.vehicleId == null',
-        },
-        ['batch/{batchId}']: {
-          $vehicleId: '$nextDoc.vehicleId',
-          $get: {
-            $vehicleBefore: './../vehicle/$($vehicleId)',
-          },
-          $update: [
-            '$vehicleBefore == batchId',
-          ]
-            .join(' || '),
-        },
-      },
-    },
-  );
-  print(rules);
-  expect(true).toBeTruthy();
-  // XXX: This test evalutates to the following:
-  // service cloud.firestore {
-  //   match /databases/{database}/documents {
-  //     match /outer/{outerDocId} {
-  //       allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)) != null);
-  //       match /inner/{innerRefId} {
-  //         allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId == innerRefId);
-  //         match /innermost/{innermostRefId} {
-  //           allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId.innerId != null);
-  //           allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId != null);
-  //           allow update: if (get(/databases/$(database)/documents/outer/$(outerDocId)/inner/$(innerRefId)).updatesEnabled == true);
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-//  expect(rules)
-//    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{outerDocId} {\n      allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)) != null);\n      match /inner/{innerRefId} {\n        allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId == innerRefId);\n        match /innermost/{innermostRefId} {\n          allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId.innerId != null);\n          allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId != null);\n        }\n      }\n    }\n  }\n}');
-});
+//test('that variables can reference other variables in the parent scope', function() {
+//  const rules = sofia(
+//    {
+//      ['databases/{database}/documents']: {
+//        $userId: 'request.auth.uid',
+//        $nextDoc: 'request.resource.data',
+//        $userId: 'request.auth.uid',
+//        ['vehicle/${vehicleId}']: {
+//          $batchId: '$nextDoc.batchId',
+//          $get: {
+//            $batchBefore: './../batch/$($batchId)',
+//          },
+//          $getAfter: {
+//            $batchAfter: './../batch/$($batchId)',
+//          },
+//          // Ensure the batch is marked as no longer
+//          // belonging to this vehicle after having
+//          // belonged to it.
+//          //$update: '$batchBefore.vehicleId == vehicleId && $batchAfter.vehicleId == null',
+//        },
+//        ['batch/{batchId}']: {
+//          $vehicleId: '$nextDoc.vehicleId',
+//          $get: {
+//            $vehicleBefore: './../vehicle/$($vehicleId)',
+//          },
+//          $update: [
+//            '$vehicleBefore == batchId',
+//          ]
+//            .join(' || '),
+//        },
+//      },
+//    },
+//  );
+//  print(rules);
+//  expect(true).toBeTruthy();
+//  // XXX: This test evalutates to the following:
+//  // service cloud.firestore {
+//  //   match /databases/{database}/documents {
+//  //     match /outer/{outerDocId} {
+//  //       allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)) != null);
+//  //       match /inner/{innerRefId} {
+//  //         allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId == innerRefId);
+//  //         match /innermost/{innermostRefId} {
+//  //           allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId.innerId != null);
+//  //           allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId != null);
+//  //           allow update: if (get(/databases/$(database)/documents/outer/$(outerDocId)/inner/$(innerRefId)).updatesEnabled == true);
+//  //         }
+//  //       }
+//  //     }
+//  //   }
+//  // }
+////  expect(rules)
+////    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /outer/{outerDocId} {\n      allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)) != null);\n      match /inner/{innerRefId} {\n        allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId == innerRefId);\n        match /innermost/{innermostRefId} {\n          allow read: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId.innerId != null);\n          allow create: if (getAfter(/databases/$(database)/documents/outer/$(outerDocId)).userId != null);\n        }\n      }\n    }\n  }\n}');
+//});
 
 test('that documents can be referenced', function() {
   const rules = sofia(
