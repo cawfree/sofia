@@ -310,9 +310,10 @@ test('that sofia supports call expressions', function() {
       ['databases/{database}/documents']: {
         ['notes/{document=**}']: {
           $write: [
-            '$nextDoc.keys().hasAll([\'admin\', $userId], \'someOtherParam\')',
+            '$nextDoc.keys().hasAll([$userId, \'someOtherParameter\'], \'someOtherParam\')',
           ]
             .join(' && '),
+          $list: '$nextDoc.user[$userId] == true',
         },
       },
     },
@@ -321,10 +322,11 @@ test('that sofia supports call expressions', function() {
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /notes/{document=**} {
-  //       allow write: if request.resource.data.keys().hasAll(['admin', request.auth.uid], 'someOtherParam');
+  //       allow write: if request.resource.data.keys().hasAll([request.auth.uid, 'someOtherParameter'], 'someOtherParam');
+  //       allow list: if (request.resource.data.user[request.auth.uid] == true);
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /notes/{document=**} {\n      allow write: if request.resource.data.keys().hasAll([\'admin\', request.auth.uid], \'someOtherParam\');\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /notes/{document=**} {\n      allow write: if request.resource.data.keys().hasAll([request.auth.uid, \'someOtherParameter\'], \'someOtherParam\');\n      allow list: if (request.resource.data.user[request.auth.uid] == true);\n    }\n  }\n}');
 });

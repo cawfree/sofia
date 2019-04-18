@@ -204,21 +204,25 @@ const syntax = {
       property,
       __sofia,
     } = def;
-    if (computed) {
-      throw new Error(
-        'Computed expressions are not supported!',
-      );
-    }
-    // XXX: Decide whether to treat look ups as already resolved.
-    //      (This can happen when a global variable is used.
-    const resolved = (object.type !== 'MemberExpression');
-    return `${evaluate(
+    const obj = evaluate(
       object,
       stack,
       ref,
       pwd,
       depth,
-    )}.${evaluate(
+    );
+    if (computed) {
+      return `${obj}[${evaluate(
+        { ...property, __sofia: { ...__sofia, resolved: false } },
+        stack,
+        ref,
+        pwd,
+        depth,
+      )}]`;
+    }
+    // XXX: Decide whether to treat look ups as already resolved.
+    //      (This can happen when a global variable is used.
+    return `${obj}.${evaluate(
       // XXX: Properties should always be treated as resolved.
       { ...property, __sofia: { ...__sofia, resolved: true } },
       stack,

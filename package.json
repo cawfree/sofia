@@ -9,7 +9,7 @@
     "constants",
     "dynamic"
   ],
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Firestore rules. With variables.",
   "main": "index.js",
   "repository": "https://github.com/Cawfree/sofia",
