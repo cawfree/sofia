@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./raw/sofia.png" alt="sofia" width="250" height="250">
+  <img src="./raw/sofia.png" alt="sofia" width="250" height="300">
 </p>
 
 # sofia
