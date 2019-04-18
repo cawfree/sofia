@@ -199,6 +199,7 @@ test('that variables can reference other variables in the parent scope', functio
               $innermostVariable: '$innerVariable.innerId',
               $read: '$innermostVariable != null',
               $create: '$innerVariable != null',
+
             },
           },
         },
