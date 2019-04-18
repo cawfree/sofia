@@ -157,6 +157,46 @@ const syntax = {
   },
   LogicalExpression: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
   BinaryExpression: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+  CallExpression: (def, stack, ref, pwd, depth) => {
+    const {
+      arguments: args,
+      callee,
+    } = def;
+    const x =evaluate(
+      callee,
+      stack,
+      ref,
+      pwd,
+      depth,
+    );
+    return `${evaluate(
+      callee,
+      stack,
+      ref,
+      pwd,
+      depth,
+    )}(${args.map(
+      (e) => evaluate(
+        e,
+        stack,
+        ref,
+        pwd,
+        depth,
+      ),
+    ).join(', ')})`;
+  },
+  ArrayExpression: (def, stack, ref, pwd, depth) => {
+    const {
+      elements,
+    } = def;
+    return `[${elements.map(e => evaluate(
+      e,
+      stack,
+      ref,
+      pwd,
+      depth,
+    )).join(', ')}]`;
+  },
   MemberExpression: (def, stack, ref, pwd, depth) => {
     const {
       computed,

@@ -302,5 +302,29 @@ test('that we can easily define conditions', function() {
     .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /user/{someUserId} {\n      allow read: if (((!resource.data.deleted) && ((someUserId == request.auth.uid) && true)) || ((!(someUserId == request.auth.uid)) && exists(/databases/$(database)/documents/friendsList/$(someUserId)/friend/$(request.auth.uid))));\n    }\n    match /friendsList/{someFriendsListId} {\n      match /friend/{friendId} {\n      }\n    }\n  }\n}');
 });
 
-
-
+test('that sofia supports call expressions', function() {
+  const rules = sofia(
+    {
+      $nextDoc: 'request.resource.data',
+      $userId: 'request.auth.uid',
+      ['databases/{database}/documents']: {
+        ['notes/{document=**}']: {
+          $write: [
+            '$nextDoc.keys().hasAll([\'admin\', $userId], \'someOtherParam\')',
+          ]
+            .join(' && '),
+        },
+      },
+    },
+  );
+  // XXX: This test evaluates to the following:
+  // service cloud.firestore {
+  //   match /databases/{database}/documents {
+  //     match /notes/{document=**} {
+  //       allow write: if request.resource.data.keys().hasAll(['admin', request.auth.uid], 'someOtherParam');
+  //     }
+  //   }
+  // }
+  expect(rules)
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /notes/{document=**} {\n      allow write: if request.resource.data.keys().hasAll([\'admin\', request.auth.uid], \'someOtherParam\');\n    }\n  }\n}');
+});
