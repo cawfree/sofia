@@ -211,25 +211,16 @@ const syntax = {
       pwd,
       depth,
     );
-    if (computed) {
-      return `${obj}[${evaluate(
-        { ...property, __sofia: { ...__sofia, resolved: false } },
-        stack,
-        ref,
-        pwd,
-        depth,
-      )}]`;
-    }
     // XXX: Decide whether to treat look ups as already resolved.
     //      (This can happen when a global variable is used.
-    return `${obj}.${evaluate(
+    return `${obj}${computed ? '[' : '.'}${evaluate(
       // XXX: Properties should always be treated as resolved.
-      { ...property, __sofia: { ...__sofia, resolved: true } },
+      { ...property, __sofia: { ...__sofia, resolved: !computed } },
       stack,
       ref,
       pwd,
       depth,
-    )}`;
+    )}${computed ? ']' : ''}`;
   },
   UnaryExpression: (def, stack, ref, pwd, depth) => {
     const {
