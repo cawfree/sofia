@@ -120,7 +120,7 @@ service cloud.firestore {
 
 ### Conditions
 
-It is even possible to define **conditions**. This help clearly define which rules need to be processed based upon a previous condition; there's nothing _special_ going on here, conditions merely resolve to a lazy evaluation of _both_ the positive and negative condition.
+It is even possible to define **conditions**. These help clearly define which rules need to be processed based upon a previous condition. Since `.rules` are predefined, it's probably useful to note that there's nothing _special_ going on here, conditions merely resolve to a lazy evaluation of _both_ the positive and negative outcome, which effectively creates a branch in your static logic.
 
 This block emphasises that `sofia` can result in more readable rule definitions, when handling more complex transactions.
 
@@ -170,4 +170,4 @@ After a call to `sofia`, the returned `.rules` are as follows. As you can see, t
 For further information, check out [`index.test.js`](./index.test.js) to find a complete breakdown of the sofia syntax.
 
 ## ✌️ Credits
-Made possible by [expression-eval](https://www.npmjs.com/package/expression-eval).
+Made possible by [jsep](https://www.npmjs.com/package/jsep).

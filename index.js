@@ -1,6 +1,7 @@
- const {
-  parse,
-} = require('expression-eval');
+// const {
+//  parse,
+//} = require('expression-eval');
+const jsep = require('jsep');
 const {
   resolve,
   dirname,
@@ -12,7 +13,11 @@ const flatten = require('lodash.flatten');
 const globalIdentifiers = {
   request: {},
   resource: {},
+  string: {},
+  float: {},
 };
+
+jsep.addBinaryOp('is', 11);
 
 // TODO: should enforce that variables dont have the same
 //       name as a reference
@@ -128,116 +133,130 @@ const combine = (def, stack, ref, pwd, depth) => {
 };
 
 const syntax = {
-  Literal: (def, stack, ref, pwd, depth) => {
-    const {
-      raw,
-      value,
-    } = def;
-    return `${raw || value}`;
+  Literal: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      const {
+        raw,
+        value,
+      } = def;
+      return `${raw || value}`;
+    },
   },
-  Identifier: (def, stack, ref, pwd, depth) => {
-    const {
-      name,
-      __sofia,
-    } = def;
-    const {
-      // XXX: Used to define whether to actually search for a variable or not.
-      //      This prevents us from tying to look up the property of document
-      //      children who are not known to the definition.
-      // TODO: This may be was 'computed' is for?
-      resolved,
-    } = (__sofia || {});
-    // XXX: Global references are resolved by default.
-    // TODO: This will *NOT* be compatible outside of top-level declarations,
-    //       i.e. if the user has a nested child property called 'request'.
-    if (!resolved && (!globalIdentifiers[name])) {
-      return identify(def, stack, ref, pwd, depth);
-    }
-    return name;
+  Compound: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      throw new SyntaxError(
+        'Compound expressions are not supported!',
+      );
+    },
   },
-  LogicalExpression: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
-  BinaryExpression: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
-  CallExpression: (def, stack, ref, pwd, depth) => {
-    const {
-      arguments: args,
-      callee,
-    } = def;
-    const x =evaluate(
-      callee,
-      stack,
-      ref,
-      pwd,
-      depth,
-    );
-    return `${evaluate(
-      callee,
-      stack,
-      ref,
-      pwd,
-      depth,
-    )}(${args.map(
-      (e) => evaluate(
+  Identifier: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      const {
+        name,
+        __sofia,
+      } = def;
+      const {
+        // XXX: Used to define whether to actually search for a variable or not.
+        //      This prevents us from tying to look up the property of document
+        //      children who are not known to the definition.
+        // TODO: This may be was 'computed' is for?
+        resolved,
+      } = (__sofia || {});
+      // XXX: Global references are resolved by default.
+      // TODO: This will *NOT* be compatible outside of top-level declarations,
+      //       i.e. if the user has a nested child property called 'request'.
+      if (!resolved && (!globalIdentifiers[name])) {
+        return identify(def, stack, ref, pwd, depth);
+      }
+      return name;
+    },
+  },
+  LogicalExpression: {
+    evaluate: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+  },
+  BinaryExpression: {
+    evaluate: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+  },
+  CallExpression: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      const {
+        arguments: args,
+        callee,
+      } = def;
+      const x =evaluate(
+        callee,
+        stack,
+        ref,
+        pwd,
+        depth,
+      );
+      return `${evaluate(
+        callee,
+        stack,
+        ref,
+        pwd,
+        depth,
+      )}(${args.map(
+        (e) => evaluate(
+          e,
+          stack,
+          ref,
+          pwd,
+          depth,
+        ),
+      ).join(', ')})`;
+    },
+  },
+  ArrayExpression: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      const {
+        elements,
+      } = def;
+      return `[${elements.map(e => evaluate(
         e,
         stack,
         ref,
         pwd,
         depth,
-      ),
-    ).join(', ')})`;
+      )).join(', ')}]`;
+    },
   },
-  ArrayExpression: (def, stack, ref, pwd, depth) => {
-    const {
-      elements,
-    } = def;
-    return `[${elements.map(e => evaluate(
-      e,
-      stack,
-      ref,
-      pwd,
-      depth,
-    )).join(', ')}]`;
-  },
-  MemberExpression: (def, stack, ref, pwd, depth) => {
-    const {
-      computed,
-      object,
-      property,
-      __sofia,
-    } = def;
-    const obj = evaluate(
-      object,
-      stack,
-      ref,
-      pwd,
-      depth,
-    );
-    if (computed) {
-      return `${obj}[${evaluate(
-        { ...property, __sofia: { ...__sofia, resolved: false } },
+  MemberExpression: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      const {
+        computed,
+        object,
+        property,
+        __sofia,
+      } = def;
+      const obj = evaluate(
+        object,
         stack,
         ref,
         pwd,
         depth,
-      )}]`;
-    }
-    // XXX: Decide whether to treat look ups as already resolved.
-    //      (This can happen when a global variable is used.
-    return `${obj}.${evaluate(
-      // XXX: Properties should always be treated as resolved.
-      { ...property, __sofia: { ...__sofia, resolved: true } },
-      stack,
-      ref,
-      pwd,
-      depth,
-    )}`;
+      );
+      // XXX: Decide whether to treat look ups as already resolved.
+      //      (This can happen when a global variable is used.
+      return `${obj}${computed ? '[' : '.'}${evaluate(
+        // XXX: Properties should always be treated as resolved.
+        { ...property, __sofia: { ...__sofia, resolved: !computed } },
+        stack,
+        ref,
+        pwd,
+        depth,
+      )}${computed ? ']' : ''}`;
+    },
   },
-  UnaryExpression: (def, stack, ref, pwd, depth) => {
-    const {
-      operator,
-      argument,
-      prefix,
-    } = def;
-    return `(${operator}${evaluate(argument, stack, ref, pwd, depth)})`;
+  UnaryExpression: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      const {
+        operator,
+        argument,
+        prefix,
+      } = def;
+      return `(${operator}${evaluate(argument, stack, ref, pwd, depth)})`;
+    },
   },
 };
 
@@ -246,7 +265,7 @@ function evaluate(def, stack, ref, pwd, depth) {
     type,
   } = def;
   if (syntax.hasOwnProperty(type)) {
-    return `${syntax[type](
+    return `${syntax[type].evaluate(
       def,
       stack, 
       ref,
@@ -318,7 +337,7 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
       (str, match) => {
         try {
           const i = identify(
-            parse(
+            jsep(
               match
                 .match(/\$\((.*?)\)/)[1],
             ),
@@ -387,7 +406,7 @@ const dictionary = {
   $reference: {
     identify: (def, stack, ref, pwd, depth, path) => {
       // XXX: Paths can reference prefined variables.
-      const a = parse(path);
+      const a = jsep(path);
       const y = evaluate(
         {
           ...a,
@@ -440,7 +459,7 @@ const compile = (def, stack, ref, pwd, depth, str) => {
     .reduce(
       (str, [mode, { compile }], i, arr) => {
         const statement = `${compile(
-          parse(`${def[mode]}`),
+          jsep(`${def[mode]}`),
           stack,
           ref,
           pwd,
