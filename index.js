@@ -136,6 +136,31 @@ const syntax = {
       } = def;
       return `${raw || value}`;
     },
+    glob: (ast) => {
+      return ast;
+    },
+  },
+  Compound: {
+    evaluate: (def, stack, ref, pwd, depth) => {
+      return 'compound!';
+    },
+    glob: (def) => {
+      const {
+        body,
+      } = def;
+      return def;
+//      console.log('should glob '+JSON.stringify(def));
+//      return body
+//        .reduce(
+//          (arr, child, i, orig) => {
+//            return ([
+//              ...arr,
+//              glob(child),
+//            ]);
+//          },
+//          [],
+//        );
+    },
   },
   Identifier: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -158,12 +183,21 @@ const syntax = {
       }
       return name;
     },
+    glob: (ast) => {
+      return ast;
+    },
   },
   LogicalExpression: {
     evaluate: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+    glob: (ast) => {
+      return ast;
+    },
   },
   BinaryExpression: {
     evaluate: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+    glob: (ast) => {
+      return ast;
+    },
   },
   CallExpression: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -194,6 +228,9 @@ const syntax = {
         ),
       ).join(', ')})`;
     },
+    glob: (ast) => {
+      return ast;
+    },
   },
   ArrayExpression: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -207,6 +244,9 @@ const syntax = {
         pwd,
         depth,
       )).join(', ')}]`;
+    },
+    glob: (ast) => {
+      return ast;
     },
   },
   MemberExpression: {
@@ -235,6 +275,9 @@ const syntax = {
         depth,
       )}${computed ? ']' : ''}`;
     },
+    glob: (ast) => {
+      return ast;
+    },
   },
   UnaryExpression: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -244,6 +287,9 @@ const syntax = {
         prefix,
       } = def;
       return `(${operator}${evaluate(argument, stack, ref, pwd, depth)})`;
+    },
+    glob: (ast) => {
+      return ast;
     },
   },
 };
@@ -445,8 +491,16 @@ const getIndent = depth => [...Array((depth + 1) * 2)]
 //      of the conventions around compound operators in
 //      rules, i.e. "is string".
 function glob(ast) {
-  console.log(ast);
-  return ast;
+  const {
+    type,
+  } = ast;
+  if (!syntax[type] || !syntax[type].glob) {
+    throw new Error(
+      `Development: Failed to glob for ${type}!`,
+    );
+  }
+  return syntax[type]
+    .glob(ast);
 }
 
 const compile = (def, stack, ref, pwd, depth, str) => {

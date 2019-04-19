@@ -9,12 +9,6 @@ const print = (inst) => {
   console.warn(JSON.stringify({ inst }));
 };
 
-// TODO: Removed in preparation of variable support.
-//test('that a default service can be created', function() {
-//  expect(sofia())
-//    .toEqual('service cloud.firestore {\n}');
-//});
-
 test('that an invalid service cannot be created', function() {
   expect(() => sofia(0, {}))
     .toThrow();
@@ -309,11 +303,12 @@ test('that sofia supports call expressions', function() {
       $userId: 'request.auth.uid',
       ['databases/{database}/documents']: {
         ['notes/{document=**}']: {
-          $write: [
-            '$nextDoc.keys().hasAll([$userId, \'someOtherParameter\'], \'someOtherParam\')',
-          ]
-            .join(' && '),
-          $list: '$nextDoc.user[$userId] == true',
+//          $write: [
+//            '$nextDoc.keys().hasAll([$userId, \'someOtherParameter\'], \'someOtherParam\')',
+//          ]
+//            .join(' && '),
+//          $list: '$nextDoc.user[$userId] == true',
+          $read: '$nextDoc.title is string && $nextDoc.rand is float',
         },
       },
     },
