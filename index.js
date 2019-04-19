@@ -1,6 +1,7 @@
- const {
-  parse,
-} = require('expression-eval');
+// const {
+//  parse,
+//} = require('expression-eval');
+const jsep = require('jsep');
 const {
   resolve,
   dirname,
@@ -332,7 +333,7 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
       (str, match) => {
         try {
           const i = identify(
-            parse(
+            jsep(
               match
                 .match(/\$\((.*?)\)/)[1],
             ),
@@ -401,7 +402,7 @@ const dictionary = {
   $reference: {
     identify: (def, stack, ref, pwd, depth, path) => {
       // XXX: Paths can reference prefined variables.
-      const a = parse(path);
+      const a = jsep(path);
       const y = evaluate(
         {
           ...a,
@@ -454,7 +455,7 @@ const compile = (def, stack, ref, pwd, depth, str) => {
     .reduce(
       (str, [mode, { compile }], i, arr) => {
         const statement = `${compile(
-          parse(`${def[mode]}`),
+          jsep(`${def[mode]}`),
           stack,
           ref,
           pwd,

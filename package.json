@@ -30,7 +30,8 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.4.3",
-    "expression-eval": "^2.0.0",
+    "expression-eval": "git+https://github.com/Cawfree/expression-eval.git",
+    "jsep": "^0.3.4",
     "lodash.flatten": "^4.4.0"
   }
 }

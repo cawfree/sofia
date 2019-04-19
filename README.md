@@ -170,4 +170,4 @@ After a call to `sofia`, the returned `.rules` are as follows. As you can see, t
 For further information, check out [`index.test.js`](./index.test.js) to find a complete breakdown of the sofia syntax.
 
 ## ✌️ Credits
-Made possible by [expression-eval](https://www.npmjs.com/package/expression-eval).
+Made possible by [jsep](https://www.npmjs.com/package/jsep).
