@@ -9,7 +9,7 @@
     "constants",
     "dynamic"
   ],
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "Firestore rules. With variables.",
   "main": "index.js",
   "repository": "https://github.com/Cawfree/sofia",
@@ -30,7 +30,6 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.4.3",
-    "expression-eval": "git+https://github.com/Cawfree/expression-eval.git",
     "jsep": "^0.3.4",
     "lodash.flatten": "^4.4.0"
   }

@@ -1,6 +1,3 @@
-// const {
-//  parse,
-//} = require('expression-eval');
 const jsep = require('jsep');
 const {
   resolve,
