@@ -13,7 +13,11 @@ const flatten = require('lodash.flatten');
 const globalIdentifiers = {
   request: {},
   resource: {},
+  string: {},
+  float: {},
 };
+
+jsep.addBinaryOp('is', 11);
 
 // TODO: should enforce that variables dont have the same
 //       name as a reference
@@ -128,8 +132,6 @@ const combine = (def, stack, ref, pwd, depth) => {
   return `(${evaluate(left, stack, ref, pwd, depth)} ${operator} ${evaluate(right, stack, ref, pwd, depth)})`;
 };
 
-const isCompoundBy = (obj = {}, name) => (obj.type === 'Identifier' && obj.name === name);
-
 const syntax = {
   Literal: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -142,7 +144,9 @@ const syntax = {
   },
   Compound: {
     evaluate: (def, stack, ref, pwd, depth) => {
-      return 'compound!';
+      throw new SyntaxError(
+        'Compound expressions are not supported!',
+      );
     },
   },
   Identifier: {

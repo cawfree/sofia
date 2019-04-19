@@ -303,12 +303,12 @@ test('that sofia supports call expressions', function() {
       $userId: 'request.auth.uid',
       ['databases/{database}/documents']: {
         ['notes/{document=**}']: {
-//          $write: [
-//            '$nextDoc.keys().hasAll([$userId, \'someOtherParameter\'], \'someOtherParam\')',
-//          ]
-//            .join(' && '),
-//          $list: '$nextDoc.user[$userId] == true',
-          $read: '$nextDoc.title is string && $nextDoc.rand is float',
+          $write: [
+            '$nextDoc.keys().hasAll([$userId, \'someOtherParameter\'], \'someOtherParam\')',
+          ]
+            .join(' && '),
+          $list: '$nextDoc.user[$userId] == true',
+          $read: '$nextDoc.title is string && ($nextDoc.rand is float || $nextDoc.rand is string)',
         },
       },
     },
@@ -317,11 +317,12 @@ test('that sofia supports call expressions', function() {
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /notes/{document=**} {
+  //       allow read: if ((request.resource.data.title is string) && ((request.resource.data.rand is float) || (request.resource.data.rand is string)));
   //       allow write: if request.resource.data.keys().hasAll([request.auth.uid, 'someOtherParameter'], 'someOtherParam');
   //       allow list: if (request.resource.data.user[request.auth.uid] == true);
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /notes/{document=**} {\n      allow write: if request.resource.data.keys().hasAll([request.auth.uid, \'someOtherParameter\'], \'someOtherParam\');\n      allow list: if (request.resource.data.user[request.auth.uid] == true);\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /notes/{document=**} {\n      allow read: if ((request.resource.data.title is string) && ((request.resource.data.rand is float) || (request.resource.data.rand is string)));\n      allow write: if request.resource.data.keys().hasAll([request.auth.uid, \'someOtherParameter\'], \'someOtherParam\');\n      allow list: if (request.resource.data.user[request.auth.uid] == true);\n    }\n  }\n}');
 });
