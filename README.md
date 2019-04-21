@@ -23,6 +23,7 @@ npm install --save @cawfree/sofia
 Using `yarn`:
 ```
 yarn add @cawfree/sofia
+```
 
 ## Getting Started
 
