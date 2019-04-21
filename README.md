@@ -10,10 +10,9 @@ sofia is a representation of Firestore Rules described using JSON, which provide
 
   - Provides variable declarations to reduce verbosity
   - Promotes more rigid and predictable rules structure
-  - Better linter compatibility
   - Easily integrated with dynamic representations
   - Relative path resolution
-  - Generates clean structured code
+  - Intuitive conditions
 
 ## 🚀 Installing
 Using `npm`:
@@ -24,6 +23,33 @@ npm install --save @cawfree/sofia
 Using `yarn`:
 ```
 yarn add @cawfree/sofia
+
+## Getting Started
+
+```javascript
+import sofia, { $ifels } from '@cawfree/sofia';
+
+// declare rules json using sofia syntax
+const rules = {
+  $userId = 'request.auth.uid',
+  'databases/{database}/documents': {
+    'user/{document=**}': {
+      $userIsAuthed = $userId != null,
+      $exists: {
+        $userIsBlocked: './../../blocked/$($userId)',
+      },
+      $read: '$userIsAuthed',
+      $write: '$userIsAuthed && !$userIsBlocked',
+    },
+    'blocked/{docId}': {
+      
+    },
+  },
+};
+
+// print the firebase-compatible rules
+console.log(sofia(rules));
+
 ```
 
 ## ✍️ Syntax Examples
