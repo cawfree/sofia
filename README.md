@@ -25,10 +25,10 @@ Using `yarn`:
 yarn add @cawfree/sofia
 ```
 
-## Getting Started
+## ✔️ Getting Started
 
 ```javascript
-import sofia, { $ifels } from '@cawfree/sofia';
+import sofia, { $ifel } from '@cawfree/sofia';
 
 // declare rules json using sofia syntax
 const rules = {
