@@ -32,18 +32,15 @@ import sofia, { $ifel } from '@cawfree/sofia';
 
 // declare rules json using sofia syntax
 const rules = {
-  $userId = 'request.auth.uid',
+  $userId: 'request.auth.uid',
   'databases/{database}/documents': {
     'user/{document=**}': {
-      $userIsAuthed = $userId != null,
+      $userIsAuthed:= '$userId != null',
       $exists: {
         $userIsBlocked: './../../blocked/$($userId)',
       },
       $read: '$userIsAuthed',
       $write: '$userIsAuthed && !$userIsBlocked',
-    },
-    'blocked/{docId}': {
-      
     },
   },
 };
