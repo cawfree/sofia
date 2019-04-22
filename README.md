@@ -35,7 +35,7 @@ const rules = {
   $userId: 'request.auth.uid',
   'databases/{database}/documents': {
     'user/{document=**}': {
-      $userIsAuthed:= '$userId != null',
+      $userIsAuthed: '$userId != null',
       $exists: {
         $userIsBlocked: './../../blocked/$($userId)',
       },
