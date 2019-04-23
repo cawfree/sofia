@@ -326,3 +326,33 @@ test('that sofia supports call expressions', function() {
   expect(rules)
     .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /notes/{document=**} {\n      allow read: if ((request.resource.data.title is string) && ((request.resource.data.rand is float) || (request.resource.data.rand is string)));\n      allow write: if request.resource.data.keys().hasAll([request.auth.uid, \'someOtherParameter\'], \'someOtherParam\');\n      allow list: if (request.resource.data.user[request.auth.uid] == true);\n    }\n  }\n}');
 });
+
+test('that getter variables can reference predefined variables', function() {
+  const rules = sofia(
+    {
+      $userId: 'request.auth.uid',
+      $nextDoc: 'request.resource.data',
+      'databases/{database}/documents': {
+        'someCollection/{document}': {
+          $get: {
+            $userProfile: './../../account/$($nextDoc.username)',
+            $someOtherDoc: './../../someOthers/$($nextDoc)',
+          },
+          $update: '$userProfile.data.someProp == $userId',
+          $read: '$someOtherDoc != null',
+        },
+      },
+    },
+  );
+  // XXX: This test evaluates to the following:
+  // service cloud.firestore {
+  //   match /databases/{database}/documents {
+  //     match /someCollection/{document} {
+  //       allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)) != null);
+  //       allow update: if (get(/databases/$(database)/documents/account/$(request.resource.data.username)).data.someProp == request.auth.uid);
+  //     }
+  //   }
+  // }
+  expect(rules)
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)) != null);\n      allow update: if (get(/databases/$(database)/documents/account/$(request.resource.data.username)).data.someProp == request.auth.uid);\n    }\n  }\n}');
+});

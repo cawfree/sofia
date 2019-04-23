@@ -114,7 +114,6 @@ function identify (def, stack, ref, pwd, depth) {
     stack,
     ref,
     newPath,
-    //pwd,
     depth,
     path,
   );
@@ -333,11 +332,17 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
     .reduce(
       (str, match) => {
         try {
+          const item = match
+            .match(/\$\((.*?)\)/)[1];
+          // TODO: This is a poor implementation which does not respect
+          //       the data configuration. It will only work for simple
+          //       properties specified within document references.
+          const index = item.indexOf('.');
+          const isolated = index >= 0 ? item.substring(0, index) : item;
+          // XXX: Ensure that property indexes are propagated
+          //      independently of a variable reference.
           const i = identify(
-            jsep(
-              match
-                .match(/\$\((.*?)\)/)[1],
-            ),
+            jsep(isolated),
             stack,
             ref,
             pwd,
@@ -345,7 +350,7 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
           );
           return str
             .split(match)
-            .join(`$(${i})`);
+            .join(`$(${i}${index >= 0 ? item.substring(index) : ''})`);
         } catch(e) {
           // TODO: Need to catch whether the variable is defined
           //       as a $ref, as we can treat these as technically
