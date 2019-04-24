@@ -103,7 +103,14 @@ const syntax = {
     identify: (def, stack, ref, pwd, depth) => {
       const {
         name,
+        __sofia,
       } = def;
+      const {
+        resolved: callerDidResolve,
+      } = (__sofia || {});
+      if (callerDidResolve) {
+        return name;
+      }
       const resolved = [...stack]
         .reverse()
         .reduce(
@@ -243,6 +250,31 @@ const syntax = {
         depth,
       )}${computed ? ']' : ''}`;
     },
+    identify: (def, stack, ref, pwd, depth) => {
+      const {
+        computed,
+        object,
+        property,
+        __sofia,
+      } = def;
+      const obj = syntax[object.type].identify(
+        object,
+        stack,
+        ref,
+        pwd,
+        depth,
+      );
+      // XXX: Decide whether to treat look ups as already resolved.
+      //      (This can happen when a global variable is used.
+      return `${obj}${computed ? '[' : '.'}${syntax[property.type].identify(
+        // XXX: Properties should always be treated as resolved.
+        { ...property, __sofia: { ...__sofia, resolved: !computed } },
+        stack,
+        ref,
+        pwd,
+        depth,
+      )}${computed ? ']' : ''}`;
+    },
   },
   UnaryExpression: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -363,7 +395,6 @@ function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
   return str;
 }
 
-// https://github.com/lodash/lodash/issues/2459#issuecomment-230255219
 const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
   const absolute = escapeBraces(
     expandPath(
@@ -375,67 +406,15 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
       path,
     ),
   );
-  const theNew = replaceAllMatches(
-    absolute,
-    stack,
-    ref,
-    pwd,
-    depth,
+  return fn(
+    replaceAllMatches(
+      absolute,
+      stack,
+      ref,
+      pwd,
+      depth,
+    ),
   );
-//  const theNew = getAllMatches(absolute, /\$\((.*?)\)/g)
-//    // TODO: Should filter duplicates prior to the execution.
-//    .reduce(
-//      (str, e) => {
-//        const {
-//          groups,
-//        } = e;
-//        return groups.reduce(
-//          (mod, toReplace) => {
-//            const item = jsep(toReplace);
-//            console.log('replace '+toReplace);
-//            console.log(JSON.stringify(item));
-//            const i = syntax[item.type].identify(
-//              item,
-//              stack,
-//              ref,
-//              pwd,
-//              depth,
-//            );
-//            console.log('found '+i);
-////            return str.replace(new RegExp(`/${toReplace}/`, 'g'), i);
-//            return str;
-//          },
-//          str,
-//        );
-//        console.log(JSON.stringify(match));
-//        return str;
-//      },
-//      absolute,
-//    );
-  return fn(theNew);
-//  return fn(
-//    (absolute.match(
-//      /\$\((.*?)\)/g,
-//    ) || [])
-//    // XXX: There can be duplicate matches for the same reference.
-//    .filter((e, i, arr) => (arr.indexOf(e) === i))
-//    .reduce(
-//      (str, match) => {
-//        const item = match
-//          .match(/\$\((.*?)\)/)[1];
-//        const parsed = jsep(item);
-//        const i = syntax[parsed.type].identify(
-//          parsed,
-//          stack,
-//          ref,
-//          pwd,
-//          depth,
-//        );
-//        return `$(${i})`;
-//      },
-//      absolute,
-//    ),
-//  );
 };
 
 const dictionary = {
