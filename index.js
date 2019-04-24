@@ -111,6 +111,7 @@ const syntax = {
       if (callerDidResolve) {
         return name;
       }
+      // TODO: to function
       const resolved = [...stack]
         .reverse()
         .reduce(
@@ -349,27 +350,13 @@ const escapeBraces = (path) => {
 // XXX: Turns relative path references into absolute ones.
 const expandPath = (def, stack, ref, pwd, depth, path) => {
   if (path.startsWith('./')) {
-    const x = resolve(
+    return resolve(
       pwd,
       path,
     );
-    return x;
   }
   return path;
 };
-
-const getAllMatches = (source, regex) => {
-  const matches = [];
-  source.replace(regex, function() {
-            matches.push({
-                          match: arguments[0],
-                          offset: arguments[arguments.length-2],
-                          groups: Array.prototype.slice.call(arguments, 1, -2)
-                      });
-            return arguments[0];
-        });
-  return matches;
-}
 
 // XXX: Replaces all wildcard calls.
 function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
@@ -383,6 +370,7 @@ function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
       index: matchIndex,
     } = match;
     const hit = match[0];
+    //console.log('hit '+hit+' in '+str+' start '+beforeMatch);
     const sep = hit.substring(2, hit.length - 1);
     const item = jsep(sep);
     const i = syntax[item.type].identify(
@@ -406,6 +394,7 @@ function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
       nextIndex,
     );
   }
+
   return str;
 }
 
@@ -420,6 +409,8 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
       path,
     ),
   );
+  //console.log('replace all for '+absolute);
+  // TODO: How to know if evaluated?
   return fn(
     replaceAllMatches(
       absolute,
@@ -457,14 +448,32 @@ const dictionary = {
     identify: (def, stack, ref, pwd, depth, path) => shouldPath(def, stack, ref, pwd, depth, path, str => `getAfter(${str})`),
   },
   $exists: {
-    identify: (def, stack, ref, pwd, depth, path) => shouldPath(def, stack, ref, pwd, depth, path, str => `exists(${str})`),
+    identify: (def, stack, ref, pwd, depth, path) => {
+      return shouldPath(def, stack, ref, pwd, depth, path, str => `exists(${str})`);
+    },
   },
   $existsAfter: {
     identify: (def, stack, ref, pwd, depth, path) => shouldPath(def, stack, ref, pwd, depth, path, str => `existsAfter(${str})`),
   },
   // XXX: This is where variables propagate.
   $reference: {
+    // XXX: Decision making logic for path extrapolation comes here.
     identify: (def, stack, ref, pwd, depth, path) => {
+      const resolved = [...stack]
+        .reverse()
+        .reduce(
+          (obj, ctx, index) => {
+            // XXX: The index tracks the depth of the context
+            //      within the stack.
+            return (obj || search(solve(ctx, index), def.name));
+          },
+          null,
+        );
+//      const alreadyResolved = !!resolved && (resolved.path === path);
+//      console.log('path '+path+' is resolved? '+alreadyResolved+' '+JSON.stringify(resolved));
+//      console.log('resolved '+JSON.stringify(resolved)+' for '+path+' for '+JSON.stringify(def));
+//      console.log('should path for '+path);
+//      console.log(JSON.stringify(def));
       // XXX: Paths can reference prefined variables.
       const a = jsep(path);
       const y = evaluate(
@@ -476,6 +485,12 @@ const dictionary = {
         pwd,
         depth,
       );
+      const alreadyResolved = (y === path);
+      if (!alreadyResolved) {
+        //console.log('path '+path+' is '+alreadyResolved);
+        return y;
+      }
+      //console.log('path '+path+' is '+alreadyResolved);
       return shouldPath(def, stack, ref, pwd, depth, y,  str => (str));
     },
   },
