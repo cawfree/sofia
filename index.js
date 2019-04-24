@@ -186,13 +186,6 @@ const syntax = {
         arguments: args,
         callee,
       } = def;
-      const x =evaluate(
-        callee,
-        stack,
-        ref,
-        pwd,
-        depth,
-      );
       return `${evaluate(
         callee,
         stack,
@@ -201,6 +194,27 @@ const syntax = {
         depth,
       )}(${args.map(
         (e) => evaluate(
+          e,
+          stack,
+          ref,
+          pwd,
+          depth,
+        ),
+      ).join(', ')})`;
+    },
+    identify: (def, stack, ref, pwd, depth) => {
+      const {
+        arguments: args,
+        callee,
+      } = def;
+      return `${syntax[callee.type].identify(
+        callee,
+        stack,
+        ref,
+        pwd,
+        depth,
+      )}(${args.map(
+        (e) => syntax[e.type].identify(
           e,
           stack,
           ref,
@@ -363,14 +377,14 @@ function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
   const toMatch = str
     .substring(index);
   const match = toMatch
-    .match(/\$\((.*?)\)/);
+    .match(/\$\((.*?)\)?\)/m);
   if (match) {
     const {
       index: matchIndex,
     } = match;
     const hit = match[0];
-    const actor = match[1];
-    const item = jsep(actor);
+    const sep = hit.substring(2, hit.length - 1);
+    const item = jsep(sep);
     const i = syntax[item.type].identify(
       item,
       stack,
