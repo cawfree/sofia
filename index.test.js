@@ -334,12 +334,16 @@ test('that getter variables can reference predefined variables', function() {
       $nextDoc: 'request.resource.data',
       'databases/{database}/documents': {
         'someCollection/{document}': {
+           $getAfter: {
+             $targetAfter: './../../$($nextDoc)/$($nextDoc.docRef[$nextDoc.attr])',
+           },
           $get: {
             $userProfile: './../../account/$($nextDoc.username)',
             $someOtherDoc: './../../someOthers/$($nextDoc)',
           },
           $update: '$userProfile.data.someProp == $userId',
           $read: '$someOtherDoc != null',
+          $write: '$targetAfter.someParam != null',
         },
       },
     },
@@ -349,10 +353,11 @@ test('that getter variables can reference predefined variables', function() {
   //   match /databases/{database}/documents {
   //     match /someCollection/{document} {
   //       allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)) != null);
+  //       allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).someParam != null);
   //       allow update: if (get(/databases/$(database)/documents/account/$(request.resource.data.username)).data.someProp == request.auth.uid);
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)) != null);\n      allow update: if (get(/databases/$(database)/documents/account/$(request.resource.data.username)).data.someProp == request.auth.uid);\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)) != null);\n      allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).someParam != null);\n      allow update: if (get(/databases/$(database)/documents/account/$(request.resource.data.username)).data.someProp == request.auth.uid);\n    }\n  }\n}');
 });

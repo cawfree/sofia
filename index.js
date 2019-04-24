@@ -52,73 +52,6 @@ const search = (solved, name) => {
     );
 };
 
-function identify (def, stack, ref, pwd, depth) {
-  const {
-    name,
-  } = def;
-  const resolved = [...stack]
-    .reverse()
-    .reduce(
-      (obj, ctx, index) => {
-        // XXX: The index tracks the depth of the context
-        //      within the stack.
-        return (obj || search(solve(ctx, index), name));
-      },
-      null,
-    );
-  if (!resolved) {
-    const resolvedRef = dictionary['$ref']
-      .deref(
-        def,
-        stack,
-        ref,
-        pwd,
-        depth,
-      );
-    if (!resolvedRef) {
-      // XXX: The user may have supplied a reference.
-      throw new Error(
-        `Failed to resolve a variable  "${name}"!`,
-      );
-    }
-    return resolvedRef;
-  }
-  const {
-    mode,
-    path,
-    depth: resolvedDepth,
-  } = resolved;
-  const fn = Object.entries(dictionary)
-    .filter(([, { identify }]) => (!!identify))
-    .reduce(
-      (fn, [key, { identify }]) => {
-        return fn || ((key === mode) && identify);
-      },
-      null,
-    );
-  if (!fn) {
-    // XXX: This is a development error; a reserved handler
-    //      for the specified dictionary worker does not exist.
-    throw new Error(
-      `Development: Failed to resolve handler "${mode}"!`,
-    );
-  }
-  // XXX: Compute the offset of the referenced variable from the current.
-  const offset = depth - resolvedDepth;
-  const newPath = pwd.split('/')
-    // TODO: How to find the root node length? This looks like hard coding around 'depth'.
-    .splice(0, offset + 4)
-    .join('/');
-  return fn(
-    def,
-    stack,
-    ref,
-    newPath,
-    depth,
-    path,
-  );
-};
-
 const combine = (def, stack, ref, pwd, depth) => {
   const {
     left,
@@ -162,9 +95,83 @@ const syntax = {
       // TODO: This will *NOT* be compatible outside of top-level declarations,
       //       i.e. if the user has a nested child property called 'request'.
       if (!resolved && (!globalIdentifiers[name])) {
-        return identify(def, stack, ref, pwd, depth);
+        return syntax[def.type]
+          .identify(def, stack, ref, pwd, depth);
       }
       return name;
+    },
+    identify: (def, stack, ref, pwd, depth) => {
+      const {
+        name,
+        __sofia,
+      } = def;
+      const {
+        resolved: callerDidResolve,
+      } = (__sofia || {});
+      if (callerDidResolve) {
+        return name;
+      }
+      const resolved = [...stack]
+        .reverse()
+        .reduce(
+          (obj, ctx, index) => {
+            // XXX: The index tracks the depth of the context
+            //      within the stack.
+            return (obj || search(solve(ctx, index), name));
+          },
+          null,
+        );
+      if (!resolved) {
+        const resolvedRef = dictionary['$ref']
+          .deref(
+            def,
+            stack,
+            ref,
+            pwd,
+            depth,
+          );
+        if (!resolvedRef) {
+          // XXX: The user may have supplied a reference.
+          throw new Error(
+            `Failed to resolve a variable  "${name}"!`,
+          );
+        }
+        return resolvedRef;
+      }
+      const {
+        mode,
+        path,
+        depth: resolvedDepth,
+      } = resolved;
+      const fn = Object.entries(dictionary)
+        .filter(([, { identify }]) => (!!identify))
+        .reduce(
+          (fn, [key, { identify }]) => {
+            return fn || ((key === mode) && identify);
+          },
+          null,
+        );
+      if (!fn) {
+        // XXX: This is a development error; a reserved handler
+        //      for the specified dictionary worker does not exist.
+        throw new Error(
+          `Development: Failed to resolve handler "${mode}"!`,
+        );
+      }
+      // XXX: Compute the offset of the referenced variable from the current.
+      const offset = depth - resolvedDepth;
+      const newPath = pwd.split('/')
+        // TODO: How to find the root node length? This looks like hard coding around 'depth'.
+        .splice(0, offset + 4)
+        .join('/');
+      return fn(
+        def,
+        stack,
+        ref,
+        newPath,
+        depth,
+        path,
+      );
     },
   },
   LogicalExpression: {
@@ -243,6 +250,31 @@ const syntax = {
         depth,
       )}${computed ? ']' : ''}`;
     },
+    identify: (def, stack, ref, pwd, depth) => {
+      const {
+        computed,
+        object,
+        property,
+        __sofia,
+      } = def;
+      const obj = syntax[object.type].identify(
+        object,
+        stack,
+        ref,
+        pwd,
+        depth,
+      );
+      // XXX: Decide whether to treat look ups as already resolved.
+      //      (This can happen when a global variable is used.
+      return `${obj}${computed ? '[' : '.'}${syntax[property.type].identify(
+        // XXX: Properties should always be treated as resolved.
+        { ...property, __sofia: { ...__sofia, resolved: !computed } },
+        stack,
+        ref,
+        pwd,
+        depth,
+      )}${computed ? ']' : ''}`;
+    },
   },
   UnaryExpression: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -312,6 +344,57 @@ const expandPath = (def, stack, ref, pwd, depth, path) => {
   return path;
 };
 
+const getAllMatches = (source, regex) => {
+  const matches = [];
+  source.replace(regex, function() {
+            matches.push({
+                          match: arguments[0],
+                          offset: arguments[arguments.length-2],
+                          groups: Array.prototype.slice.call(arguments, 1, -2)
+                      });
+            return arguments[0];
+        });
+  return matches;
+}
+
+// XXX: Replaces all wildcard calls.
+function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
+  const beforeMatch = str.substring(0, index);
+  const toMatch = str
+    .substring(index);
+  const match = toMatch
+    .match(/\$\((.*?)\)/);
+  if (match) {
+    const {
+      index: matchIndex,
+    } = match;
+    const hit = match[0];
+    const actor = match[1];
+    const item = jsep(actor);
+    const i = syntax[item.type].identify(
+      item,
+      stack,
+      ref,
+      pwd,
+      depth,
+    );
+    const pfx = `${beforeMatch}${toMatch.substring(0, matchIndex)}`;
+    const res = `$(${i})`;
+    const sfx = `${toMatch.substring(hit.length + matchIndex)}`;
+    const result = pfx + res + sfx;
+    const nextIndex = pfx.length + res.length;
+    return replaceAllMatches(
+      result,
+      stack,
+      ref,
+      pwd,
+      depth,
+      nextIndex,
+    );
+  }
+  return str;
+}
+
 const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
   const absolute = escapeBraces(
     expandPath(
@@ -324,56 +407,17 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
     ),
   );
   return fn(
-    (absolute.match(
-      /\$\((.*?)\)/g,
-    ) || [])
-    // XXX: There can be duplicate matches for the same reference.
-    .filter((e, i, arr) => (arr.indexOf(e) === i))
-    .reduce(
-      (str, match) => {
-        try {
-          const item = match
-            .match(/\$\((.*?)\)/)[1];
-          // TODO: This is a poor implementation which does not respect
-          //       the data configuration. It will only work for simple
-          //       properties specified within document references.
-          const index = item.indexOf('.');
-          const isolated = index >= 0 ? item.substring(0, index) : item;
-          // XXX: Ensure that property indexes are propagated
-          //      independently of a variable reference.
-          const i = identify(
-            jsep(isolated),
-            stack,
-            ref,
-            pwd,
-            depth,
-          );
-          return str
-            .split(match)
-            .join(`$(${i}${index >= 0 ? item.substring(index) : ''})`);
-        } catch(e) {
-          // TODO: Need to catch whether the variable is defined
-          //       as a $ref, as we can treat these as technically
-          //       resolved.
-          // TODO: Enforce this approach.
-          console.warn(
-            `Warning: Failed to resolve source of path "${match}.", will return unchanged. This behaviour will change in future.`,
-          );
-          // TODO: What to do in this case? It is unsafe
-          //       to permit variables that haven't been
-          //       acknowledged. Should enforce this.
-          return str;
-        }
-      },
+    replaceAllMatches(
       absolute,
+      stack,
+      ref,
+      pwd,
+      depth,
     ),
   );
 };
 
 const dictionary = {
-//  $variable: {
-//    //sortOrder: 0,
-//  },
   $read: {
     compile: (def, stack, ref, pwd, depth, str) => shouldCompile(def, stack, ref, pwd, depth, str, 'read'),
   },
@@ -441,11 +485,6 @@ const dictionary = {
     },
   },
 };
-//  },
-//)
-//  .sort(([, e1], [, e2]) => {
-//    return (e1.sortOrder || Number.MAX_VALUE) - (e2.sortOrder || Number.MAX_VALUE);
-//  });
 
 const reservedKeys = Object.entries(dictionary)
   .map(([key]) => key);
