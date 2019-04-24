@@ -332,6 +332,7 @@ test('that getter variables can reference predefined variables', function() {
     {
       $userId: 'request.auth.uid',
       $nextDoc: 'request.resource.data',
+      $lastDoc: 'resource.data',
       'databases/{database}/documents': {
         'someCollection/{document}': {
           $getAfter: {
@@ -344,22 +345,23 @@ test('that getter variables can reference predefined variables', function() {
           },
           $exists: {
             $looseCannon: './../../pop/$($userId)',
+            $someDynamicVar: './../../dynamics/$($lastDoc.user + "%" + $userId + "%")',
           },
           $flightRisk: '!$looseCannon',
           $update: '$userProfile.data.someProp == $userId',
           $read: '$someOtherDoc.data != null',
           $write: '$targetAfter.data.someParam != null',
           $list: '$flightRisk',
+          $read: '$someDynamicVar',
         },
       },
     },
   );
-  print(rules);
   // XXX: This test evaluates to the following:
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /someCollection/{document} {
-  //       allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)).data != null);
+  //       allow read: if exists(/databases/$(database)/documents/dynamics/$((((resource.data.user + "%") + request.auth.uid) + "%")));
   //       allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);
   //       allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));
   //       allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);
@@ -367,5 +369,5 @@ test('that getter variables can reference predefined variables', function() {
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)).data != null);\n      allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);\n      allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));\n      allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if exists(/databases/$(database)/documents/dynamics/$((((resource.data.user + \"%\") + request.auth.uid) + \"%\")));\n      allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);\n      allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));\n      allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);\n    }\n  }\n}');
 });

@@ -61,9 +61,25 @@ const combine = (def, stack, ref, pwd, depth) => {
   return `(${evaluate(left, stack, ref, pwd, depth)} ${operator} ${evaluate(right, stack, ref, pwd, depth)})`;
 };
 
+const combineIdentity = (def, stack, ref, pwd, depth) => {
+  const {
+    left,
+    right,
+    operator,
+  } = def;
+  return `(${syntax[left.type].identify(left, stack, ref, pwd, depth)} ${operator} ${syntax[right.type].identify(right, stack, ref, pwd, depth)})`;
+};
+
 const syntax = {
   Literal: {
     evaluate: (def, stack, ref, pwd, depth) => {
+      const {
+        raw,
+        value,
+      } = def;
+      return `${raw || value}`;
+    },
+    identify: (def, stack, ref, pwd, depth) => {
       const {
         raw,
         value,
@@ -177,9 +193,11 @@ const syntax = {
   },
   LogicalExpression: {
     evaluate: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+    identify: (def, stack, ref, pwd, depth) => combineIdentity(def, stack, ref, pwd, depth),
   },
   BinaryExpression: {
     evaluate: (def, stack, ref, pwd, depth) => combine(def, stack, ref, pwd, depth),
+    identify: (def, stack, ref, pwd, depth) => combineIdentity(def, stack, ref, pwd, depth),
   },
   CallExpression: {
     evaluate: (def, stack, ref, pwd, depth) => {
@@ -231,6 +249,18 @@ const syntax = {
         elements,
       } = def;
       return `[${elements.map(e => evaluate(
+        e,
+        stack,
+        ref,
+        pwd,
+        depth,
+      )).join(', ')}]`;
+    },
+    identify: (def, stack, ref, pwd, depth) => {
+      const {
+        elements,
+      } = def;
+      return `[${elements.map(e => syntax[e.type].identify(
         e,
         stack,
         ref,
@@ -299,6 +329,14 @@ const syntax = {
         prefix,
       } = def;
       return `(${operator}${evaluate(argument, stack, ref, pwd, depth)})`;
+    },
+    identify: (def, stack, ref, pwd, depth) => {
+      const {
+        operator,
+        argument,
+        prefix,
+      } = def;
+      return `(${operator}${syntax[argument.type].identify(argument, stack, ref, pwd, depth)})`;
     },
   },
 };
