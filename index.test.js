@@ -334,33 +334,38 @@ test('that getter variables can reference predefined variables', function() {
       $nextDoc: 'request.resource.data',
       'databases/{database}/documents': {
         'someCollection/{document}': {
-           $getAfter: {
-             $targetAfter: './../../$($nextDoc)/$($nextDoc.docRef[$nextDoc.attr])',
-              $userProfile: './../../account/$($nextDoc.friendlyName.lower())', 
-           },
+          $getAfter: {
+            $targetAfter: './../../$($nextDoc)/$($nextDoc.docRef[$nextDoc.attr])',
+             $userProfile: './../../account/$($nextDoc.friendlyName.lower())', 
+          },
           $get: {
             $userProfile: './../../account/$($nextDoc.username)',
             $someOtherDoc: './../../someOthers/$($nextDoc)',
           },
+          $exists: {
+            $looseCannon: './../../pop/$($userId)',
+          },
+          $flightRisk: '!$looseCannon',
           $update: '$userProfile.data.someProp == $userId',
-          $read: '$someOtherDoc != null',
-          $write: '$targetAfter.someParam != null',
-          $list: '$userProfile != null',
+          $read: '$someOtherDoc.data != null',
+          $write: '$targetAfter.data.someParam != null',
+          $list: '$flightRisk',
         },
       },
     },
   );
+  print(rules);
   // XXX: This test evaluates to the following:
   // service cloud.firestore {
   //   match /databases/{database}/documents {
   //     match /someCollection/{document} {
-  //       allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)) != null);
-  //       allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).someParam != null);
-  //       allow list: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())) != null);
+  //       allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)).data != null);
+  //       allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);
+  //       allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));
   //       allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)) != null);\n      allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).someParam != null);\n      allow list: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())) != null);\n      allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (get(/databases/$(database)/documents/someOthers/$(request.resource.data)).data != null);\n      allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);\n      allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));\n      allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);\n    }\n  }\n}');
 });
