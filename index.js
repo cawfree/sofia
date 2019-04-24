@@ -370,7 +370,6 @@ function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
       index: matchIndex,
     } = match;
     const hit = match[0];
-    //console.log('hit '+hit+' in '+str+' start '+beforeMatch);
     const sep = hit.substring(2, hit.length - 1);
     const item = jsep(sep);
     const i = syntax[item.type].identify(
@@ -409,7 +408,6 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
       path,
     ),
   );
-  //console.log('replace all for '+absolute);
   // TODO: How to know if evaluated?
   return fn(
     replaceAllMatches(
@@ -469,11 +467,6 @@ const dictionary = {
           },
           null,
         );
-//      const alreadyResolved = !!resolved && (resolved.path === path);
-//      console.log('path '+path+' is resolved? '+alreadyResolved+' '+JSON.stringify(resolved));
-//      console.log('resolved '+JSON.stringify(resolved)+' for '+path+' for '+JSON.stringify(def));
-//      console.log('should path for '+path);
-//      console.log(JSON.stringify(def));
       // XXX: Paths can reference prefined variables.
       const a = jsep(path);
       const y = evaluate(
@@ -485,12 +478,11 @@ const dictionary = {
         pwd,
         depth,
       );
-      const alreadyResolved = (y === path);
-      if (!alreadyResolved) {
-        //console.log('path '+path+' is '+alreadyResolved);
+      if (!(y === path)) {
+        // XXX: If the path is unknown, we can return from this call without attempting
+        //      to determine the path. (Variables have their paths evaluated earlier in the chain.).
         return y;
       }
-      //console.log('path '+path+' is '+alreadyResolved);
       return shouldPath(def, stack, ref, pwd, depth, y,  str => (str));
     },
   },
