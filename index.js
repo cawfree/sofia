@@ -325,6 +325,44 @@ const getAllMatches = (source, regex) => {
   return matches;
 }
 
+// XXX: Replaces all wildcard calls.
+function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
+  const beforeMatch = str.substring(0, index);
+  const toMatch = str
+    .substring(index);
+  const match = toMatch
+    .match(/\$\((.*?)\)/);
+  if (match) {
+    const {
+      index: matchIndex,
+    } = match;
+    const hit = match[0];
+    const actor = match[1];
+    const item = jsep(actor);
+    const i = syntax[item.type].identify(
+      item,
+      stack,
+      ref,
+      pwd,
+      depth,
+    );
+    const pfx = `${beforeMatch}${toMatch.substring(0, matchIndex)}`;
+    const res = `$(${i})`;
+    const sfx = `${toMatch.substring(hit.length + matchIndex)}`;
+    const result = pfx + res + sfx;
+    const nextIndex = pfx.length + res.length;
+    return replaceAllMatches(
+      result,
+      stack,
+      ref,
+      pwd,
+      depth,
+      nextIndex,
+    );
+  }
+  return str;
+}
+
 // https://github.com/lodash/lodash/issues/2459#issuecomment-230255219
 const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
   const absolute = escapeBraces(
@@ -337,60 +375,67 @@ const shouldPath = (def, stack, ref, pwd, depth, path, fn) => {
       path,
     ),
   );
-  const theNew = getAllMatches(absolute, /\$\((.*?)\)/g)
-    // TODO: Should filter duplicates prior to the execution.
-    .reduce(
-      (str, e) => {
-        const {
-          groups,
-        } = e;
-        return groups.reduce(
-          (mod, toReplace) => {
-            const item = jsep(toReplace);
-            console.log('replace '+toReplace);
-            console.log(JSON.stringify(item));
-            const i = syntax[item.type].identify(
-              item,
-              stack,
-              ref,
-              pwd,
-              depth,
-            );
-            console.log('found '+i);
-//            return str.replace(new RegExp(`/${toReplace}/`, 'g'), i);
-            return str;
-          },
-          str,
-        );
-        console.log(JSON.stringify(match));
-        return str;
-      },
-      absolute,
-    );
-  console.log('c '+theNew);
-  return fn(
-    (absolute.match(
-      /\$\((.*?)\)/g,
-    ) || [])
-    // XXX: There can be duplicate matches for the same reference.
-    .filter((e, i, arr) => (arr.indexOf(e) === i))
-    .reduce(
-      (str, match) => {
-        const item = match
-          .match(/\$\((.*?)\)/)[1];
-        const parsed = jsep(item);
-        const i = syntax[parsed.type].identify(
-          parsed,
-          stack,
-          ref,
-          pwd,
-          depth,
-        );
-        return `$(${i})`;
-      },
-      absolute,
-    ),
+  const theNew = replaceAllMatches(
+    absolute,
+    stack,
+    ref,
+    pwd,
+    depth,
   );
+//  const theNew = getAllMatches(absolute, /\$\((.*?)\)/g)
+//    // TODO: Should filter duplicates prior to the execution.
+//    .reduce(
+//      (str, e) => {
+//        const {
+//          groups,
+//        } = e;
+//        return groups.reduce(
+//          (mod, toReplace) => {
+//            const item = jsep(toReplace);
+//            console.log('replace '+toReplace);
+//            console.log(JSON.stringify(item));
+//            const i = syntax[item.type].identify(
+//              item,
+//              stack,
+//              ref,
+//              pwd,
+//              depth,
+//            );
+//            console.log('found '+i);
+////            return str.replace(new RegExp(`/${toReplace}/`, 'g'), i);
+//            return str;
+//          },
+//          str,
+//        );
+//        console.log(JSON.stringify(match));
+//        return str;
+//      },
+//      absolute,
+//    );
+  return fn(theNew);
+//  return fn(
+//    (absolute.match(
+//      /\$\((.*?)\)/g,
+//    ) || [])
+//    // XXX: There can be duplicate matches for the same reference.
+//    .filter((e, i, arr) => (arr.indexOf(e) === i))
+//    .reduce(
+//      (str, match) => {
+//        const item = match
+//          .match(/\$\((.*?)\)/)[1];
+//        const parsed = jsep(item);
+//        const i = syntax[parsed.type].identify(
+//          parsed,
+//          stack,
+//          ref,
+//          pwd,
+//          depth,
+//        );
+//        return `$(${i})`;
+//      },
+//      absolute,
+//    ),
+//  );
 };
 
 const dictionary = {
