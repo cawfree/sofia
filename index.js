@@ -674,7 +674,14 @@ const $ifel = (
   conditionMet,
   conditionNotMet,
 ) => {
-  return `((${condition}) && ${conditionMet()}) || (!(${condition}) && ${conditionNotMet()})`;
+  if (conditionMet && conditionNotMet) {
+    return `((${condition}) && ${conditionMet()}) || (!(${condition}) && ${conditionNotMet()})`;
+  } else if (conditionMet) {
+    return `((${condition}) && ${conditionMet()})`;
+  }
+  throw new Error(
+    'You must specify at least one positive result handler when using $ifel.',
+  );
 };
 
 module.exports = {
