@@ -335,7 +335,7 @@ test('that getter variables can reference predefined variables', function() {
       'databases/{database}/documents': {
         'someCollection/{document}': {
            $getAfter: {
-             $targetAfter: './../../$($nextDoc.docType)/$($nextDoc.hierarchy[$nextDoc.index])',
+             $targetAfter: './../../$($nextDoc)/$($nextDoc)',
            },
 //          $get: {
 //            $userProfile: './../../account/$($nextDoc.username)',
