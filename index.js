@@ -15,6 +15,7 @@ const globalIdentifiers = {
 };
 
 jsep.addBinaryOp('is', 11);
+jsep.addBinaryOp(':', 12);
 
 // TODO: should enforce that variables dont have the same
 //       name as a reference
@@ -58,7 +59,10 @@ const combine = (def, stack, ref, pwd, depth) => {
     right,
     operator,
   } = def;
-  return `(${evaluate(left, stack, ref, pwd, depth)} ${operator} ${evaluate(right, stack, ref, pwd, depth)})`;
+  // XXX: The range operator does not support brackets.
+  const shouldApplyBrackets = operator !== ':';
+  const combined = `${evaluate(left, stack, ref, pwd, depth)} ${operator} ${evaluate(right, stack, ref, pwd, depth)}`;
+  return shouldApplyBrackets ? `(${combined})` : combined;
 };
 
 const combineIdentity = (def, stack, ref, pwd, depth) => {

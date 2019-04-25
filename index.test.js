@@ -327,7 +327,9 @@ test('that sofia supports call expressions', function() {
     .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /notes/{document=**} {\n      allow read: if ((request.resource.data.title is string) && ((request.resource.data.rand is float) || (request.resource.data.rand is string)));\n      allow write: if request.resource.data.keys().hasAll([request.auth.uid, \'someOtherParameter\'], \'someOtherParam\');\n      allow list: if (request.resource.data.user[request.auth.uid] == true);\n    }\n  }\n}');
 });
 
-test('that getter variables can reference predefined variables', function() {
+// XXX: This test doesn't make any sense; don't read too much into it.
+//      Here, we're just stress testing the parsing algorithm.
+test('that getter variables can reference predefined variables in conjunction with complex syntax', function() {
   const rules = sofia(
     {
       $userId: 'request.auth.uid',
@@ -354,6 +356,7 @@ test('that getter variables can reference predefined variables', function() {
           $read: '$someDynamicVar && $someComplexReference && !$someHardcodedDoc && $someOtherDoc.data != null',
           $write: '$targetAfter.data.someParam != null',
           $list: '$flightRisk',
+          $delete: '$someDynamicVar[0:2] == "abc"',
         },
       },
     },
@@ -366,9 +369,10 @@ test('that getter variables can reference predefined variables', function() {
   //       allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);
   //       allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));
   //       allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);
+  //       allow delete: if (exists(/databases/$(database)/documents/dynamics/$((((resource.data.user + "%") + request.auth.uid) + "%")))[0 : 2] == "abc");
   //     }
   //   }
   // }
   expect(rules)
-    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (((exists(/databases/$(database)/documents/dynamics/$((((resource.data.user + \"%\") + request.auth.uid) + \"%\"))) && exists(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.keys()[0]))) && (!exists(/databases/$(database)/documents/$(request.resource.data)/$(request.auth.uid)))) && (get(/databases/$(database)/documents/someOthers/$(request.resource.data)).data != null));\n      allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);\n      allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));\n      allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);\n    }\n  }\n}');
+    .toEqual('service cloud.firestore {\n  match /databases/{database}/documents {\n    match /someCollection/{document} {\n      allow read: if (((exists(/databases/$(database)/documents/dynamics/$((((resource.data.user + \"%\") + request.auth.uid) + \"%\"))) && exists(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.keys()[0]))) && (!exists(/databases/$(database)/documents/$(request.resource.data)/$(request.auth.uid)))) && (get(/databases/$(database)/documents/someOthers/$(request.resource.data)).data != null));\n      allow write: if (getAfter(/databases/$(database)/documents/$(request.resource.data)/$(request.resource.data.docRef[request.resource.data.attr])).data.someParam != null);\n      allow list: if (!exists(/databases/$(database)/documents/pop/$(request.auth.uid)));\n      allow update: if (getAfter(/databases/$(database)/documents/account/$(request.resource.data.friendlyName.lower())).data.someProp == request.auth.uid);\n      allow delete: if (exists(/databases/$(database)/documents/dynamics/$((((resource.data.user + \"%\") + request.auth.uid) + \"%\")))[0 : 2] == \"abc\");\n    }\n  }\n}');
 });
