@@ -124,7 +124,7 @@ const syntax = {
       const {
         resolved: callerDidResolve,
       } = (__sofia || {});
-      if (callerDidResolve) {
+      if (callerDidResolve || Object.keys(globalIdentifiers).indexOf(name) >= 0) {
         return name;
       }
       // TODO: to function
