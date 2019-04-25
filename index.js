@@ -402,7 +402,7 @@ function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
   const toMatch = str
     .substring(index);
   const match = toMatch
-    .match(/\$\((.*?)\)?\)/m);
+    .match(/\$\(([^\/]*)\)/m);
   if (match) {
     const {
       index: matchIndex,
