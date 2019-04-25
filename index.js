@@ -124,7 +124,7 @@ const syntax = {
       const {
         resolved: callerDidResolve,
       } = (__sofia || {});
-      if (callerDidResolve) {
+      if (callerDidResolve || Object.keys(globalIdentifiers).indexOf(name) >= 0) {
         return name;
       }
       // TODO: to function
@@ -402,7 +402,7 @@ function replaceAllMatches(str, stack, ref, pwd, depth, index = 0) {
   const toMatch = str
     .substring(index);
   const match = toMatch
-    .match(/\$\((.*?)\)?\)/m);
+    .match(/\$\(([^\/]*)\)/m);
   if (match) {
     const {
       index: matchIndex,
